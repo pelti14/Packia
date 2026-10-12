@@ -27,7 +27,12 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return null;
-  const profile = await db.profile.findUnique({ where: { id: user.id }, include: { client: true } });
+  // Solo columnas que existen desde la primera versión: así, tras subir una versión nueva con
+  // cambios de base de datos aún sin aplicar, se puede entrar y llegar a «Actualización pendiente».
+  const profile = await db.profile.findUnique({
+    where: { id: user.id },
+    select: { id: true, email: true, name: true, role: true, clientId: true, client: { select: { name: true } } },
+  });
   if (!profile) return null;
   return {
     id: profile.id,

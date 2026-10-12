@@ -35,6 +35,7 @@ async function main() {
     where: { id: userId },
     create: { id: userId, email: email.toLowerCase(), name: name ?? null, role: "ADMIN" },
     update: { role: "ADMIN", clientId: null, ...(name && { name }) },
+    select: { id: true },
   });
   console.log(`Administrador listo: ${email}`);
   await db.$disconnect();

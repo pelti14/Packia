@@ -59,6 +59,7 @@ export async function createFirstAdmin(_: FormState, form: FormData): Promise<Fo
     where: { id: userId },
     create: { id: userId, email: values.email, name: values.name || null, role: "ADMIN" },
     update: { role: "ADMIN", clientId: null, name: values.name || undefined },
+    select: { id: true },
   });
 
   const supabase = await createSupabaseServer();
