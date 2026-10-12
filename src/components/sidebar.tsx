@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
-import { BadgePercent, Boxes, Contact, Presentation, LayoutDashboard, LogOut, PackagePlus, Plug, Receipt, RotateCcw, Settings, ShieldCheck, Truck, Users, type LucideIcon } from "lucide-react";
+import { BadgePercent, Boxes, Contact, Presentation, Printer, LayoutDashboard, LogOut, PackagePlus, Plug, Receipt, RotateCcw, Settings, ShieldCheck, Truck, Users, type LucideIcon } from "lucide-react";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { useNotifications } from "@/components/notifications";
@@ -20,6 +20,7 @@ const ALL: Role[] = ["ADMIN", "STAFF", "CLIENT"];
 const OPERATIONS: Item[] = [
   { href: "/", label: "Panel", icon: LayoutDashboard, roles: ALL },
   { href: "/salida", label: "Salida", icon: Truck, roles: ALL, badge: "salida" },
+  { href: "/etiquetas", label: "Etiquetas", icon: Printer, roles: ["ADMIN", "STAFF"], badge: "etiquetas" },
   { href: "/recepcion", label: "Recepción", icon: PackagePlus, roles: ALL, badge: "recepcion" },
   { href: "/devoluciones", label: "Devoluciones", icon: RotateCcw, roles: ALL, badge: "devoluciones" },
   { href: "/inventario", label: "Inventario", icon: Boxes, roles: ALL, badge: "inventario" },

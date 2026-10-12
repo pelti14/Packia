@@ -156,6 +156,9 @@ model Order {
   /// Id del envío en el proveedor de etiquetas.
   labelRef        String?
   weightGrams     Int?
+  /// Cuándo se imprimió la etiqueta por última vez (null = en «Etiquetas por imprimir»).
+  labelPrintedAt  DateTime?
+  labelPrintCount Int         @default(0)
   /// Error al devolver el seguimiento a la tienda, si lo hubo.
   syncError       String?
   placedAt        DateTime
@@ -167,6 +170,7 @@ model Order {
   @@unique([storeId, externalId])
   @@index([status])
   @@index([clientId, shippedAt])
+  @@index([labelPrintedAt])
 }
 
 model OrderItem {
@@ -293,6 +297,19 @@ model AppSettings {
   sendcloudSecretKey String?
   /// Emitir solo las facturas del mes anterior los días 1-5 de cada mes.
   autoInvoice        Boolean  @default(true)
+  /// Impresora de etiquetas: THERMAL_100x150 | THERMAL_4x6 | A4_4 | A4_1
+  printFormat        String   @default("THERMAL_100x150")
+  /// Ajuste fino en milímetros (positivo = derecha / arriba).
+  printOffsetX       Float    @default(0)
+  printOffsetY       Float    @default(0)
+  /// Escala en % (100 = tamaño real).
+  printScale         Int      @default(100)
+  /// Girar 180° (impresoras que sacan la etiqueta al revés).
+  printRotate180     Boolean  @default(false)
+  /// Abrir el diálogo de impresión al abrir el PDF.
+  printAutoDialog    Boolean  @default(true)
+  /// Orden de las etiquetas: CLIENT (cliente y pedido) | CARRIER (agencia) | TIME (hora de envío)
+  printSort          String   @default("CARRIER")
   /// Marca comercial que se ve en toda la app y en la web (por defecto «Packia»).
   brandName          String?
   /// Texto bajo el nombre (por defecto «fulfillment»).

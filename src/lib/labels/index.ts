@@ -37,7 +37,8 @@ export async function shippingOptionsFor(client: Client): Promise<{ options: Shi
       error = err instanceof Error ? err.message : String(err);
     }
   }
-  options.push(...CARRIERS.map((c) => ({ value: `packia:${c}`, label: `${c} · etiqueta Packia`, group: "Etiqueta Packia (interna)" })));
+  const brand = (await getBrand()).name;
+  options.push(...CARRIERS.map((c) => ({ value: `packia:${c}`, label: `${c} · etiqueta ${brand}`, group: `Etiqueta ${brand} (interna)` })));
   const defaultValue = client.defaultShipping && options.some((o) => o.value === client.defaultShipping) ? client.defaultShipping : options[0].value;
   return { options, defaultValue, error };
 }

@@ -29,12 +29,16 @@ export default async function PrepararPage({ searchParams }: { searchParams: Pro
   const base = `/salida/preparar?clients=${clientIds.join(",")}${hoy ? "&hoy=1" : ""}`;
   const shippedLabel = etiqueta ? await db.order.findUnique({ where: { id: etiqueta }, select: { id: true, number: true, labelProvider: true, status: true } }) : null;
 
+  const toPrint = shippedLabel ? await db.order.count({ where: { status: "SHIPPED", labelProvider: { in: ["PACKIA", "SENDCLOUD"] }, labelPrintedAt: null } }) : 0;
   const LabelBanner = shippedLabel?.status === "SHIPPED" && shippedLabel.labelProvider !== "MANUAL" && (
     <div className="mb-6">
       <Notice tone="success">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <span>Pedido <b className="mono">{shippedLabel.number}</b> enviado. Su etiqueta está lista.</span>
-          <a href={`/api/labels/${shippedLabel.id}`} target="_blank" className="btn-primary py-2"><Printer className="h-4 w-4" /> Imprimir etiqueta</a>
+          <span>Pedido <b className="mono">{shippedLabel.number}</b> enviado. Su etiqueta está en <b>Etiquetas por imprimir</b> ({toPrint}).</span>
+          <span className="flex gap-2">
+            <Link href="/etiquetas" className="btn-primary py-2"><Printer className="h-4 w-4" /> Imprimir todas ({toPrint})</Link>
+            <a href={`/api/labels/${shippedLabel.id}`} target="_blank" className="btn-ghost py-2">Solo esta</a>
+          </span>
         </div>
       </Notice>
     </div>

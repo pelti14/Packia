@@ -130,9 +130,16 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                     )}
                   </div>
                   {order.labelProvider && order.labelProvider !== "MANUAL" && (
-                    <a href={`/api/labels/${order.id}`} target="_blank" className="btn-primary w-full">
-                      <Printer className="h-4 w-4" /> Imprimir etiqueta
-                    </a>
+                    <>
+                      {staff && (
+                        <div className={order.labelPrintedAt ? "text-xs text-mint-600" : "text-xs font-semibold text-amber-600"}>
+                          {order.labelPrintedAt ? `Etiqueta impresa ${formatDate(order.labelPrintedAt)}` : <>Etiqueta en <Link href="/etiquetas" className="underline">Por imprimir</Link></>}
+                        </div>
+                      )}
+                      <a href={`/api/labels/${order.id}`} target="_blank" className="btn-primary w-full">
+                        <Printer className="h-4 w-4" /> {order.labelPrintedAt ? "Reimprimir etiqueta" : "Imprimir etiqueta"}
+                      </a>
+                    </>
                   )}
                   <Link href={`/devoluciones/nueva?order=${order.id}`} className="btn-ghost w-full">
                     <RotateCcw className="h-4 w-4" /> Registrar devolución

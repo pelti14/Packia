@@ -38,7 +38,7 @@ export async function markNotificationsSeen(user: CurrentUser) {
 }
 
 export type Badge = { count: number; tone: "green" | "red" } | null;
-export type Badges = Record<"salida" | "recepcion" | "devoluciones" | "tiendas" | "inventario", Badge>;
+export type Badges = Record<"salida" | "recepcion" | "devoluciones" | "tiendas" | "inventario" | "etiquetas", Badge>;
 
 /**
  * Numeritos del menú. Rojo = urgente (retrasos, errores); verde = tareas normales pendientes.
@@ -47,7 +47,7 @@ export async function getBadges(user: CurrentUser): Promise<Badges> {
   const scope = clientScope(user);
   const today = startOfDay();
   const threeDaysAgo = new Date(Date.now() - 3 * 86_400_000);
-  const [open, inbound, inboundLate, returns, returnsLate, storeErrors, toValidate] = await Promise.all([
+  const [open, inbound, inboundLate, returns, returnsLate, storeErrors, toValidate, toPrint] = await Promise.all([
     db.order.findMany({ where: { ...scope, status: { in: ["PENDING", "PICKING", "PACKED"] } }, select: { placedAt: true, clientId: true, items: { select: { sku: true } } } }),
     db.inbound.count({ where: { ...scope, status: "EXPECTED" } }),
     db.inbound.count({ where: { ...scope, status: "EXPECTED", expectedAt: { lt: today } } }),
@@ -55,6 +55,7 @@ export async function getBadges(user: CurrentUser): Promise<Badges> {
     db.return.count({ where: { ...scope, status: "RECEIVED", receivedAt: { lt: threeDaysAgo } } }),
     user.role === "CLIENT" ? Promise.resolve(0) : db.store.count({ where: { lastSyncError: { not: null } } }),
     user.role === "CLIENT" ? Promise.resolve([]) : db.product.findMany({ where: { validatedAt: null }, select: { clientId: true, sku: true } }),
+    user.role === "CLIENT" ? Promise.resolve(0) : db.order.count({ where: { status: "SHIPPED", labelProvider: { in: ["PACKIA", "SENDCLOUD"] }, labelPrintedAt: null } }),
   ]);
   // Rojo si algún pedido abierto está bloqueado por un producto sin validar.
   const pendingKeys = new Set(toValidate.map((p) => `${p.clientId}|${p.sku}`));
@@ -68,5 +69,6 @@ export async function getBadges(user: CurrentUser): Promise<Badges> {
     devoluciones: badge(returns, returnsLate > 0),
     tiendas: badge(storeErrors, true),
     inventario: badge(toValidate.length, blocking),
+    etiquetas: badge(toPrint, false),
   };
 }
