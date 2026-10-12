@@ -1,0 +1,113 @@
+// Modelo de datos de Packia.
+// SQLite en desarrollo; para producción cambiar el provider a "postgresql".
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Empresa a la que le hacemos la logística.
+model Client {
+  id           String    @id @default(cuid())
+  name         String
+  contactEmail String?
+  /// ARRANQUE | CRECIMIENTO | ESCALA
+  plan         String    @default("ARRANQUE")
+  /// Pedidos incluidos en la cuota mensual.
+  planOrders   Int       @default(300)
+  createdAt    DateTime  @default(now())
+  stores       Store[]
+  products     Product[]
+  orders       Order[]
+}
+
+/// Tienda online conectada (Shopify o WooCommerce).
+model Store {
+  id             String    @id @default(cuid())
+  clientId       String
+  client         Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  /// SHOPIFY | WOOCOMMERCE
+  platform       String
+  name           String
+  /// Shopify: mitienda.myshopify.com · WooCommerce: https://mitienda.com
+  domain         String
+  /// Shopify: token de la app personalizada (Admin API).
+  accessToken    String?
+  /// WooCommerce: claves de la REST API.
+  consumerKey    String?
+  consumerSecret String?
+  /// Secreto para verificar la firma de los webhooks.
+  webhookSecret  String?
+  /// Tienda de demostración: no llama a ninguna API externa.
+  isDemo         Boolean   @default(false)
+  lastSyncAt     DateTime?
+  lastSyncError  String?
+  createdAt      DateTime  @default(now())
+  orders         Order[]
+  products       Product[]
+
+  @@unique([platform, domain])
+}
+
+model Product {
+  id         String   @id @default(cuid())
+  clientId   String
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  storeId    String?
+  store      Store?   @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  externalId String?
+  sku        String
+  name       String
+  imageUrl   String?
+  /// Stock físico en nuestro almacén.
+  stock      Int      @default(0)
+  /// Ubicación en estantería, p. ej. A-01-02.
+  location   String?
+  /// Por debajo de este stock se avisa al cliente.
+  lowStockAt Int      @default(10)
+  updatedAt  DateTime @updatedAt
+
+  @@unique([clientId, sku])
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  clientId        String
+  client          Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  storeId         String
+  store           Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  externalId      String
+  /// Número visible en la tienda (#1042).
+  number          String
+  /// PENDING | PICKING | PACKED | SHIPPED | CANCELLED
+  status          String      @default("PENDING")
+  customerName    String
+  email           String?
+  /// Dirección de envío normalizada (JSON).
+  shippingAddress String
+  carrier         String?
+  trackingNumber  String?
+  /// Error al devolver el seguimiento a la tienda, si lo hubo.
+  syncError       String?
+  placedAt        DateTime
+  shippedAt       DateTime?
+  createdAt       DateTime    @default(now())
+  items           OrderItem[]
+
+  @@unique([storeId, externalId])
+  @@index([status])
+}
+
+model OrderItem {
+  id             String  @id @default(cuid())
+  orderId        String
+  order          Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  externalLineId String?
+  sku            String
+  name           String
+  quantity       Int
+}

@@ -1,0 +1,122 @@
+@import "tailwindcss";
+
+/* ───────────── Marca Packia ─────────────
+   Claro, limpio y "futurista": fondo casi blanco, cristal translúcido,
+   degradado azul eléctrico → aqua y acentos violeta. */
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+  --font-display: var(--font-grotesk), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --color-canvas: #f5f7fb;
+  --color-ink-900: #0b1324;
+  --color-ink-700: #27324a;
+  --color-ink-500: #5b6782;
+  --color-ink-400: #8a94ab;
+  --color-line: #e3e8f2;
+
+  --color-brand-50: #eef1ff;
+  --color-brand-100: #dfe5ff;
+  --color-brand-200: #c3ceff;
+  --color-brand-400: #7b92ff;
+  --color-brand-500: #4f6bff;
+  --color-brand-600: #3a52f0;
+  --color-brand-700: #2d40c9;
+
+  --color-aqua-50: #e8fbfd;
+  --color-aqua-400: #3fd9e6;
+  --color-aqua-500: #12c8d9;
+  --color-aqua-600: #0aa3b3;
+
+  --color-violet-400: #a597ff;
+  --color-violet-500: #8b7cff;
+
+  --color-mint-50: #e7faf3;
+  --color-mint-500: #22c993;
+  --color-mint-600: #12a476;
+
+  --color-amber-50: #fff6e5;
+  --color-amber-500: #f5a524;
+  --color-amber-600: #d9870b;
+
+  --color-rose-50: #fff0f2;
+  --color-rose-500: #f0476a;
+
+  --shadow-glass: 0 1px 0 0 rgb(255 255 255 / 0.8) inset, 0 12px 32px -12px rgb(30 50 120 / 0.14), 0 2px 6px -2px rgb(30 50 120 / 0.06);
+  --shadow-glow: 0 10px 30px -10px rgb(79 107 255 / 0.55);
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+  body {
+    @apply bg-canvas text-ink-900 font-sans antialiased;
+    background-image:
+      radial-gradient(60rem 40rem at 110% -10%, rgb(18 200 217 / 0.13), transparent 60%),
+      radial-gradient(50rem 36rem at -10% 0%, rgb(139 124 255 / 0.12), transparent 60%),
+      radial-gradient(40rem 30rem at 50% 120%, rgb(79 107 255 / 0.08), transparent 60%);
+    background-attachment: fixed;
+  }
+  h1, h2, h3 {
+    @apply font-display tracking-tight;
+  }
+  ::selection {
+    background: rgb(79 107 255 / 0.18);
+  }
+}
+
+/* Rejilla técnica muy sutil detrás del contenido */
+@utility bg-grid {
+  background-image:
+    linear-gradient(to right, rgb(79 107 255 / 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(79 107 255 / 0.06) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(ellipse at top, black 30%, transparent 75%);
+}
+
+@utility glass {
+  @apply rounded-2xl border border-white/70 bg-white/70 backdrop-blur-xl;
+  box-shadow: var(--shadow-glass);
+}
+
+@utility text-gradient {
+  @apply bg-gradient-to-r from-brand-600 via-brand-500 to-aqua-500 bg-clip-text text-transparent;
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 disabled:pointer-events-none disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-gradient-to-r from-brand-600 to-brand-500 text-white hover:-translate-y-px hover:from-brand-700 hover:to-brand-600;
+  box-shadow: var(--shadow-glow);
+}
+@utility btn-ghost {
+  @apply btn border border-line bg-white/80 text-ink-700 hover:border-brand-200 hover:bg-white hover:text-brand-600;
+}
+
+@utility input {
+  @apply w-full rounded-xl border border-line bg-white/90 px-3.5 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 transition outline-none focus:border-brand-400 focus:ring-4 focus:ring-brand-100;
+}
+@utility label {
+  @apply mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink-500;
+}
+
+@utility table-head {
+  @apply px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-ink-400;
+}
+@utility cell {
+  @apply px-5 py-3.5 text-sm;
+}
+
+@utility mono {
+  @apply font-mono text-[13px];
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.85); }
+}
+.animate-pulse-dot {
+  animation: pulse-dot 1.8s ease-in-out infinite;
+}
