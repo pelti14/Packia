@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { assertRole } from "@/lib/auth";
+import { notify } from "@/lib/notifications";
 import type { FormState } from "@/app/actions";
 
 const str = (v: FormDataEntryValue | null) => (typeof v === "string" ? v.trim() : "");
@@ -41,6 +42,10 @@ export async function createInbound(_: FormState, form: FormData): Promise<FormS
       items: { create: lines.map((l) => ({ sku: l.sku, name: l.name || l.sku, expectedQty: l.qty })) },
     },
   });
+  if (user.role === "CLIENT") {
+    const units = lines.reduce((n, l) => n + l.qty, 0);
+    await notify({ title: `Mercancía en camino: ${reference}`, body: `${user.clientName ?? ""} · ${units} uds.`, href: `/recepcion/${inbound.id}`, clientId, tone: "info" });
+  }
   revalidatePath("/", "layout");
   redirect(`/recepcion/${inbound.id}`);
 }
@@ -74,6 +79,16 @@ export async function receiveInbound(inboundId: string, _: FormState, form: Form
       });
     }
     await tx.inbound.update({ where: { id: inboundId }, data: { status: "RECEIVED", receivedAt: new Date() } });
+  });
+  const expected = inbound.items.reduce((n, i) => n + i.expectedQty, 0);
+  const received = counts.reduce((n, c) => n + c.received, 0);
+  await notify({
+    title: `Recepción ${inbound.reference} confirmada`,
+    body: received === expected ? `${received} uds. en stock` : `${received} de ${expected} uds. recibidas (con diferencias)`,
+    href: `/recepcion/${inbound.id}`,
+    clientId: inbound.clientId,
+    tone: received === expected ? "success" : "warning",
+    audience: "ALL",
   });
   revalidatePath("/", "layout");
   return { success: "Recepción confirmada y stock actualizado" };

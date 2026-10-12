@@ -183,3 +183,20 @@ export function BackLink({ href, children }: { href: string; children: React.Rea
     </Link>
   );
 }
+
+/** Barra de búsqueda (formulario GET): conserva el resto de filtros de la URL. */
+export function SearchBar({ placeholder, defaultValue, keep = {} }: { placeholder: string; defaultValue?: string; keep?: Record<string, string | undefined> }) {
+  return (
+    <form className="glass flex w-full max-w-md items-center gap-2 rounded-xl px-3.5 py-2">
+      {Object.entries(keep).map(([k, v]) => (v ? <input key={k} type="hidden" name={k} value={v} /> : null))}
+      <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-ink-400" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-3.5-3.5" />
+      </svg>
+      <input name="q" defaultValue={defaultValue} placeholder={placeholder} className="w-full bg-transparent text-sm outline-none placeholder:text-ink-400" aria-label={placeholder} />
+      {defaultValue && (
+        <a href="?" className="text-xs font-semibold text-brand-600 hover:underline">Limpiar</a>
+      )}
+    </form>
+  );
+}

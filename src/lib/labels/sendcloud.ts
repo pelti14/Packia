@@ -8,7 +8,7 @@ import { countryCode } from "./sender";
  */
 const BASE = process.env.SENDCLOUD_API_URL ?? "https://panel.sendcloud.sc/api/v2";
 
-type Keys = { publicKey: string; secretKey: string };
+export type Keys = { publicKey: string; secretKey: string };
 
 export async function sendcloudEnabled() {
   const { publicKey, secretKey } = (await getSettings()).sendcloud;
@@ -46,6 +46,7 @@ export async function listShippingMethods(keys?: Keys): Promise<ShippingMethod[]
 }
 
 export async function createParcel(input: {
+  keys?: Keys;
   orderNumber: string;
   email?: string | null;
   address: Address;
@@ -58,6 +59,7 @@ export async function createParcel(input: {
   const data = await call<{
     parcel: { id: number; tracking_number: string; tracking_url: string; carrier: { code: string } };
   }>("/parcels", {
+    keys: input.keys,
     method: "POST",
     body: {
       parcel: {
@@ -86,8 +88,8 @@ export async function createParcel(input: {
 }
 
 /** PDF A6 de la etiqueta para impresora térmica. */
-export async function fetchLabelPdf(parcelId: string): Promise<Uint8Array> {
-  const res = await fetch(`${BASE}/labels/label_printer/${parcelId}`, { headers: await auth(), cache: "no-store" });
+export async function fetchLabelPdf(parcelId: string, keys?: Keys): Promise<Uint8Array> {
+  const res = await fetch(`${BASE}/labels/label_printer/${parcelId}`, { headers: await auth(keys), cache: "no-store" });
   if (!res.ok) throw new Error(`Sendcloud respondió ${res.status} al descargar la etiqueta`);
   return new Uint8Array(await res.arrayBuffer());
 }

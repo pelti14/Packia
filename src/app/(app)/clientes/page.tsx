@@ -5,13 +5,15 @@ import { requireUser } from "@/lib/auth";
 import { eur } from "@/lib/format";
 import { startOfMonth } from "@/lib/format";
 import { PLANS, type Plan } from "@/lib/types";
-import { Card, CardHeader, EmptyState, PageHeader, PlatformBadge } from "@/components/ui";
+import { Card, CardHeader, EmptyState, PageHeader, PlatformBadge, SearchBar } from "@/components/ui";
 import { NewClientForm } from "./new-client-form";
 
-export default async function ClientsPage() {
+export default async function ClientsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  const { q } = await searchParams;
   const user = await requireUser(["ADMIN", "STAFF"]);
   const admin = user.role === "ADMIN";
   const clients = await db.client.findMany({
+    where: q ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { contactEmail: { contains: q, mode: "insensitive" } }] } : undefined,
     orderBy: { createdAt: "asc" },
     include: {
       stores: true,
@@ -22,6 +24,7 @@ export default async function ClientsPage() {
   return (
     <>
       <PageHeader eyebrow="Negocio" title="Clientes" description="Las marcas a las que les hacemos la logística, su plan y el uso de este mes." />
+      <div className="mb-6"><SearchBar placeholder="Buscar cliente…" defaultValue={q} /></div>
 
       <div className="grid gap-6 xl:grid-cols-3">
         <div className={admin ? "grid content-start gap-4 md:grid-cols-2 xl:col-span-2" : "grid content-start gap-4 md:grid-cols-2 xl:col-span-3"}>

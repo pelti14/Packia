@@ -20,6 +20,8 @@ model Profile {
   name      String?
   /// ADMIN | STAFF | CLIENT
   role      String   @default("STAFF")
+  /// Notificaciones anteriores a esta fecha se consideran leídas.
+  notificationsSeenAt DateTime?
   clientId  String?
   client    Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
@@ -40,6 +42,12 @@ model Client {
   monthlyFeeCents    Int       @default(48000)
   extraOrderFeeCents Int       @default(140)
   returnFeeCents     Int       @default(150)
+  /// Envío por defecto: "packia:GLS" (etiqueta interna) o "sendcloud:1402" (método de Sendcloud).
+  defaultShipping    String?
+  /// Cuenta de Sendcloud propia del cliente, con sus contratos de agencia (cifrado). Si está vacío se usa la de Packia.
+  sendcloudPublicKey String?
+  /// Cifrado (AES-256-GCM).
+  sendcloudSecretKey String?
   createdAt          DateTime  @default(now())
   stores             Store[]
   products           Product[]
@@ -48,6 +56,8 @@ model Client {
   returns            Return[]
   invoices           Invoice[]
   users              Profile[]
+  customers          StoreCustomer[]
+  notifications      Notification[]
 }
 
 /// Tienda online conectada (Shopify o WooCommerce). Las credenciales se guardan cifradas.
@@ -77,10 +87,13 @@ model Store {
   /// Tienda de demostración: no llama a ninguna API externa.
   isDemo         Boolean   @default(false)
   lastSyncAt     DateTime?
+  /// Los productos se sincronizan con menos frecuencia que los pedidos.
+  productsSyncedAt DateTime?
   lastSyncError  String?
   createdAt      DateTime  @default(now())
   orders         Order[]
   products       Product[]
+  customers      StoreCustomer[]
 
   @@unique([platform, domain])
 }
@@ -266,4 +279,55 @@ model AppSettings {
   /// Cifrado (AES-256-GCM).
   sendcloudSecretKey String?
   updatedAt          DateTime @updatedAt
+}
+
+/// Cliente final de una tienda (quien compra), guardado a partir de sus pedidos.
+model StoreCustomer {
+  id           String   @id @default(cuid())
+  clientId     String
+  client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  storeId      String
+  store        Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  /// Email en minúsculas o, si no hay, nombre + código postal.
+  key          String
+  name         String
+  email        String?
+  phone        String?
+  address1     String?
+  address2     String?
+  city         String?
+  zip          String?
+  province     String?
+  country      String?
+  ordersCount  Int      @default(0)
+  firstOrderAt DateTime
+  lastOrderAt  DateTime
+
+  @@unique([storeId, key])
+  @@index([clientId])
+}
+
+/// Avisos para la campana de notificaciones.
+model Notification {
+  id        String   @id @default(cuid())
+  /// Cliente al que se refiere (si lo hay).
+  clientId  String?
+  client    Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  /// STAFF: solo equipo · ALL: también el cliente afectado.
+  audience  String   @default("STAFF")
+  /// info | success | warning | danger
+  tone      String   @default("info")
+  title     String
+  body      String?
+  href      String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+/// Cerrojo para que la sincronización automática no se ejecute dos veces a la vez.
+model SyncLock {
+  id          String   @id
+  lockedUntil DateTime
+  lastRunAt   DateTime?
 }

@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { clsx } from "clsx";
-import { ArrowRightCircle, Inbox, Printer } from "lucide-react";
+import { ArrowRightCircle, Inbox, Printer, Undo2 } from "lucide-react";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { clientScope, isStaff, requireUser } from "@/lib/auth";
-import { advanceOrders } from "@/app/actions";
+import { advanceOrders, revertOrders } from "@/app/actions";
+import { ClientBoard, type ClientCard } from "./client-board";
 import { formatDate, formatDay } from "@/lib/format";
 import { dueKey, madridMidnight, urgency } from "@/lib/schedule";
 import { Card, EmptyState, PageHeader, PlatformBadge, StatusBadge, Tabs } from "@/components/ui";
@@ -60,6 +61,31 @@ export default async function SalidaPage({ searchParams }: { searchParams: Promi
     staff ? db.client.findMany({ orderBy: { name: "asc" } }) : Promise.resolve([]),
   ]);
 
+  // Tarjetas de clientes (sin filtros de búsqueda): cuántos pedidos tiene cada uno por preparar.
+  let cards: ClientCard[] = [];
+  if (staff) {
+    const [allClients, allOpen] = await Promise.all([
+      db.client.findMany({ orderBy: { name: "asc" }, include: { stores: { select: { platform: true } } } }),
+      db.order.findMany({ where: { status: { in: OPEN } }, select: { clientId: true, status: true, placedAt: true } }),
+    ]);
+    cards = allClients.map((c) => {
+      const mine = allOpen.filter((o) => o.clientId === c.id);
+      const due = mine.filter((o) => urgency(o.placedAt) !== "LATER");
+      const shipping = c.defaultShipping?.startsWith("packia:") ? c.defaultShipping.slice(7) : c.defaultShipping ? "Sendcloud" : null;
+      return {
+        id: c.id,
+        name: c.name,
+        platforms: [...new Set(c.stores.map((s) => (s.platform === "SHOPIFY" ? "Shopify" : "WooCommerce")))],
+        shipping,
+        open: mine.length,
+        today: due.length,
+        overdue: due.filter((o) => urgency(o.placedAt) === "OVERDUE").length,
+        pending: mine.filter((o) => o.status !== "PACKED").length,
+        packed: mine.filter((o) => o.status === "PACKED").length,
+      };
+    });
+  }
+
   const byUrgency = (u: string) => open.filter((o) => urgency(o.placedAt) === u);
   const groups: Record<string, typeof open> = {
     TODAY: open.filter((o) => urgency(o.placedAt) !== "LATER"),
@@ -91,7 +117,7 @@ export default async function SalidaPage({ searchParams }: { searchParams: Promi
     return `/salida?${sp.toString()}`;
   };
 
-  const canAdvance = staff && ["TODAY", "OVERDUE", "PENDING", "PICKING"].includes(tab);
+  const canAdvance = staff && ["TODAY", "OVERDUE", "PENDING", "PICKING", "PACKED"].includes(tab);
   const canPrint = staff && tab === "SHIPPED";
 
   return (
@@ -99,8 +125,11 @@ export default async function SalidaPage({ searchParams }: { searchParams: Promi
       <PageHeader
         eyebrow="Operación"
         title="Salida"
-        description="Pedidos que llegan de Shopify y WooCommerce. Corte a las 14:00 en días laborables: lo que entra antes sale hoy."
+        description="Elige clientes y prepara sus pedidos uno a uno. Corte a las 14:00 en días laborables: lo que entra antes sale hoy."
       />
+
+      {staff && <ClientBoard cards={cards} />}
+      {staff && <h2 className="mb-4 text-lg font-semibold text-ink-900">Todos los pedidos</h2>}
 
       <div className="mb-4 flex flex-col gap-3 2xl:flex-row 2xl:items-center 2xl:justify-between">
         <Tabs active={tab} tabs={TABS.map((t) => ({ ...t, href: href({ tab: t.key }), count: counts[t.key] }))} />
@@ -126,9 +155,14 @@ export default async function SalidaPage({ searchParams }: { searchParams: Promi
       <form>
         {(canAdvance || canPrint) && orders.length > 0 && (
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            {canAdvance && (
+            {canAdvance && tab !== "PACKED" && (
               <button formAction={advanceOrders} className="btn-ghost">
                 <ArrowRightCircle className="h-4 w-4" /> Avanzar seleccionados
+              </button>
+            )}
+            {canAdvance && (
+              <button formAction={revertOrders} className="btn-ghost">
+                <Undo2 className="h-4 w-4" /> Volver a pendiente
               </button>
             )}
             {canPrint && (
@@ -137,7 +171,7 @@ export default async function SalidaPage({ searchParams }: { searchParams: Promi
               </button>
             )}
             <span className="text-xs text-ink-400">
-              {canAdvance ? "Sin preparar → Preparando → Listo para etiqueta" : "Une las etiquetas en un solo PDF"}
+              {canAdvance ? "Avanzar: Sin preparar → Preparando → Embalado · Volver: deshace la preparación" : "Une las etiquetas en un solo PDF"}
             </span>
           </div>
         )}
@@ -165,7 +199,7 @@ export default async function SalidaPage({ searchParams }: { searchParams: Promi
                       <tr key={o.id} className={clsx("group transition hover:bg-brand-50/40", open && urgency(o.placedAt) === "OVERDUE" && "bg-rose-50/40")}>
                         {(canAdvance || canPrint) && (
                           <td className="cell">
-                            {((canAdvance && (o.status === "PENDING" || o.status === "PICKING")) ||
+                            {((canAdvance && open) ||
                               (canPrint && o.labelProvider && o.labelProvider !== "MANUAL")) && (
                               <input type="checkbox" name="ids" value={o.id} className="h-4 w-4 accent-brand-500" aria-label={`Seleccionar ${o.number}`} />
                             )}

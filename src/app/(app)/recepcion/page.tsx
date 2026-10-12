@@ -4,13 +4,23 @@ import { db } from "@/lib/db";
 import { clientScope, requireUser } from "@/lib/auth";
 import { formatDate, formatDateOnly } from "@/lib/format";
 import { INBOUND_STATUS_LABEL } from "@/lib/types";
-import { Card, EmptyState, PageHeader, Pill, Tabs } from "@/components/ui";
+import { Card, EmptyState, PageHeader, Pill, SearchBar, Tabs } from "@/components/ui";
+import type { Prisma } from "@prisma/client";
 
-export default async function RecepcionPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
-  const { tab: t } = await searchParams;
+export default async function RecepcionPage({ searchParams }: { searchParams: Promise<{ tab?: string; q?: string }> }) {
+  const { tab: t, q } = await searchParams;
   const tab = t === "RECEIVED" ? "RECEIVED" : "EXPECTED";
   const user = await requireUser();
-  const scope = clientScope(user);
+  const search: Prisma.InboundWhereInput = q
+    ? {
+        OR: [
+          { reference: { contains: q, mode: "insensitive" } },
+          { client: { name: { contains: q, mode: "insensitive" } } },
+          { items: { some: { OR: [{ sku: { contains: q, mode: "insensitive" } }, { name: { contains: q, mode: "insensitive" } }] } } },
+        ],
+      }
+    : {};
+  const scope = { ...clientScope(user), ...search };
 
   const [inbounds, counts] = await Promise.all([
     db.inbound.findMany({
@@ -32,14 +42,15 @@ export default async function RecepcionPage({ searchParams }: { searchParams: Pr
         actions={<Link href="/recepcion/nueva" className="btn-primary"><Plus className="h-4 w-4" /> Nuevo aviso de entrada</Link>}
       />
 
-      <div className="mb-4">
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <Tabs
           active={tab}
           tabs={[
-            { key: "EXPECTED", label: "Previstas", href: "/recepcion?tab=EXPECTED", count: count("EXPECTED") },
-            { key: "RECEIVED", label: "Recibidas", href: "/recepcion?tab=RECEIVED", count: count("RECEIVED") },
+            { key: "EXPECTED", label: "Previstas", href: `/recepcion?tab=EXPECTED${q ? `&q=${encodeURIComponent(q)}` : ""}`, count: count("EXPECTED") },
+            { key: "RECEIVED", label: "Recibidas", href: `/recepcion?tab=RECEIVED${q ? `&q=${encodeURIComponent(q)}` : ""}`, count: count("RECEIVED") },
           ]}
         />
+        <SearchBar placeholder="Buscar cliente, referencia, producto o SKU…" defaultValue={q} keep={{ tab }} />
       </div>
 
       <Card className="overflow-hidden">

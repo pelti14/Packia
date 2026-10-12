@@ -8,9 +8,9 @@ import { CARRIERS } from "@/lib/types";
 import { SubmitButton } from "@/components/submit-button";
 import { Notice } from "@/components/ui";
 
-type Method = { id: number; name: string; carrier: string };
+type Option = { value: string; label: string; group: string };
 
-export function ShipForm({ orderId, weightGrams, sendcloudMethods }: { orderId: string; weightGrams: number; sendcloudMethods: Method[] }) {
+export function ShipForm({ orderId, weightGrams, options, defaultValue }: { orderId: string; weightGrams: number; options: Option[]; defaultValue: string }) {
   const [mode, setMode] = useState<"label" | "manual">("label");
   const [labelState, labelAction] = useActionState<FormState, FormData>(labelAndShip.bind(null, orderId), undefined);
   const [manualState, manualAction] = useActionState<FormState, FormData>(shipOrderAction.bind(null, orderId), undefined);
@@ -36,18 +36,17 @@ export function ShipForm({ orderId, weightGrams, sendcloudMethods }: { orderId: 
         <form action={labelAction} className="space-y-4">
           <div>
             <label className="label" htmlFor="method">Envío</label>
-            <select id="method" name="method" className="input" defaultValue={lv.method || (sendcloudMethods[0] ? `sendcloud:${sendcloudMethods[0].id}` : "packia:MRW")}>
-              {sendcloudMethods.length > 0 && (
-                <optgroup label="Sendcloud · etiqueta oficial de la agencia">
-                  {sendcloudMethods.map((m) => <option key={m.id} value={`sendcloud:${m.id}`}>{m.name}</option>)}
+            <select id="method" name="method" className="input" defaultValue={lv.method || defaultValue}>
+              {[...new Set(options.map((o) => o.group))].map((g) => (
+                <optgroup key={g} label={g}>
+                  {options.filter((o) => o.group === g).map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}{o.value === defaultValue ? " ★ por defecto" : ""}</option>
+                  ))}
                 </optgroup>
-              )}
-              <optgroup label="Etiqueta Packia (interna)">
-                {CARRIERS.map((c) => <option key={c} value={`packia:${c}`}>{c} · etiqueta Packia</option>)}
-              </optgroup>
+              ))}
             </select>
-            {!sendcloudMethods.length && (
-              <p className="mt-1.5 text-xs text-ink-400">Conecta Sendcloud para imprimir etiquetas oficiales de MRW, GLS, Correos Express, SEUR…</p>
+            {!options.some((o) => o.value.startsWith("sendcloud:")) && (
+              <p className="mt-1.5 text-xs text-ink-400">Conecta Sendcloud (en Ajustes o en la ficha del cliente) para imprimir etiquetas oficiales de GLS, MRW, SEUR…</p>
             )}
           </div>
           <div>

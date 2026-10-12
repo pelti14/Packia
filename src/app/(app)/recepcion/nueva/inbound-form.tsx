@@ -23,7 +23,9 @@ export function InboundForm({ clients, products, fixedClientId }: { clients: { i
       return [{ sku: "", name: "", qty: 1 }];
     }
   });
+  const [clientQuery, setClientQuery] = useState("");
   const catalog = useMemo(() => products.filter((p) => p.clientId === clientId), [products, clientId]);
+  const visibleClients = clients.filter((c) => c.name.toLowerCase().includes(clientQuery.trim().toLowerCase()));
 
   const update = (i: number, patch: Partial<Line>) =>
     setLines((ls) =>
@@ -74,10 +76,26 @@ export function InboundForm({ clients, products, fixedClientId }: { clients: { i
         <div className="space-y-4 px-5 py-5">
           {!fixedClientId && (
             <div>
-              <label className="label" htmlFor="clientId">Cliente</label>
-              <select id="clientId" name="clientId" className="input" value={clientId} onChange={(e) => setClientId(e.target.value)}>
-                {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              <input type="hidden" name="clientId" value={clientId} />
+              <label className="label" htmlFor="clientSearch">Cliente</label>
+              <input id="clientSearch" value={clientQuery} onChange={(e) => setClientQuery(e.target.value)} className="input" placeholder="Buscar cliente…" autoComplete="off" />
+              <div className="mt-2 grid max-h-56 grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+                {visibleClients.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setClientId(c.id)}
+                    className={
+                      c.id === clientId
+                        ? "rounded-xl border border-brand-400 bg-brand-50 px-3 py-2.5 text-left text-sm font-semibold text-brand-700 shadow-[0_0_0_3px_var(--color-brand-100)]"
+                        : "rounded-xl border border-line bg-white/80 px-3 py-2.5 text-left text-sm font-medium text-ink-700 hover:border-brand-200"
+                    }
+                  >
+                    {c.name}
+                  </button>
+                ))}
+                {!visibleClients.length && <p className="text-sm text-ink-400">Ningún cliente con ese nombre</p>}
+              </div>
             </div>
           )}
           <div>

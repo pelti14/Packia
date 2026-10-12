@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
 /** Rutas accesibles sin sesión. */
-const PUBLIC = ["/login", "/auth", "/setup", "/api/webhooks"];
+const PUBLIC = ["/login", "/auth", "/setup", "/api/webhooks", "/api/cron"];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -10,7 +10,7 @@ export async function middleware(request: NextRequest) {
   // Instalación nueva sin Supabase configurado: todo va al asistente.
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     const path = request.nextUrl.pathname;
-    if (path.startsWith("/setup") || path.startsWith("/api/webhooks")) return response;
+    if (path.startsWith("/setup") || path.startsWith("/api/webhooks") || path.startsWith("/api/cron")) return response;
     const url = request.nextUrl.clone();
     url.pathname = "/setup";
     url.search = "";

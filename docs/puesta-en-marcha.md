@@ -119,6 +119,15 @@ Cuando existe el administrador, `/setup` queda bloqueado.
    - **Con ZIP:** en hPanel → tu Node.js Web App → sube el ZIP nuevo → **Redeploy**. Las variables de entorno se mantienen.
 2. Entra en Packia como administrador. Si la versión trae cambios de base de datos, verás **«Actualización pendiente»**. Pulsa **Actualizar ahora**. Tus datos se mantienen y la app se abre sola al terminar.
 
+## Sincronización automática
+Packia trae los pedidos nuevos de todas las tiendas **cada minuto** desde el propio servidor, sin configurar nada. Si en algún momento ves que no llegan:
+1. Añade la variable `CRON_SECRET` con una clave larga cualquiera y pulsa **Redeploy**.
+2. En hPanel → **Avanzado → Cron Jobs**, crea una tarea cada minuto (o cada 5) que llame a:
+   ```
+   curl -s "https://tu-dominio.com/api/cron/sync?key=TU_CRON_SECRET"
+   ```
+   Packia evita que se ejecuten dos sincronizaciones a la vez.
+
 ## Problemas frecuentes
 
 | Síntoma | Solución |

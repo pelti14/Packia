@@ -292,7 +292,7 @@ ALTER TABLE "Invoice" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "InvoiceLine" ENABLE ROW LEVEL SECURITY;
 
 INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
-VALUES ('cc19e1da-f4ae-43a7-bc67-97a6df2dd3a7', '10d15a52a8e24001cceeb9c7539d6c5f52df5221dffbccf056d82955d32e23c4', now(), '20261012030730_init', 1);
+VALUES ('a81db9c6-7305-4470-8939-6c9773659504', '10d15a52a8e24001cceeb9c7539d6c5f52df5221dffbccf056d82955d32e23c4', now(), '20261012030730_init', 1);
 
 -- ════════ 20261012031806_app_settings ════════
 -- CreateTable
@@ -323,7 +323,7 @@ ALTER TABLE "AppSettings" ENABLE ROW LEVEL SECURITY;
 DO $$ BEGIN IF to_regclass('public._prisma_migrations') IS NOT NULL THEN ALTER TABLE "_prisma_migrations" ENABLE ROW LEVEL SECURITY; END IF; END $$;
 
 INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
-VALUES ('ce55edf2-f1ef-40c7-9415-027c8030c2ff', '43fa63b1c3f2360a1429f876f167cb5f74fc9d20c5e86ffa1d87a1a95fdb5aeb', now(), '20261012031806_app_settings', 1);
+VALUES ('dbb62bcd-0a63-4f69-b784-a383fb0cd11e', '43fa63b1c3f2360a1429f876f167cb5f74fc9d20c5e86ffa1d87a1a95fdb5aeb', now(), '20261012031806_app_settings', 1);
 
 -- ════════ 20261012120000_shopify_dev_dashboard ════════
 -- AlterTable: Shopify Dev Dashboard (client credentials)
@@ -332,4 +332,88 @@ ADD COLUMN "shopifyClientSecret" TEXT,
 ADD COLUMN "tokenExpiresAt" TIMESTAMP(3);
 
 INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
-VALUES ('ac53a4b5-480e-4875-a281-876e7e0042d7', 'b7d797a87902cbcea16cc86b75ca38d851ba8463137949e9c1a78c80f99065d2', now(), '20261012120000_shopify_dev_dashboard', 1);
+VALUES ('09e349d0-42e2-49c0-832a-4f8730c35ab0', 'b7d797a87902cbcea16cc86b75ca38d851ba8463137949e9c1a78c80f99065d2', now(), '20261012120000_shopify_dev_dashboard', 1);
+
+-- ════════ 20261012180000_v4_notifications_customers ════════
+-- AlterTable
+ALTER TABLE "Client" ADD COLUMN     "defaultShipping" TEXT,
+ADD COLUMN     "sendcloudPublicKey" TEXT,
+ADD COLUMN     "sendcloudSecretKey" TEXT;
+
+-- AlterTable
+ALTER TABLE "Profile" ADD COLUMN     "notificationsSeenAt" TIMESTAMP(3);
+
+-- AlterTable
+ALTER TABLE "Store" ADD COLUMN     "productsSyncedAt" TIMESTAMP(3);
+
+-- CreateTable
+CREATE TABLE "StoreCustomer" (
+    "id" TEXT NOT NULL,
+    "clientId" TEXT NOT NULL,
+    "storeId" TEXT NOT NULL,
+    "key" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "email" TEXT,
+    "phone" TEXT,
+    "address1" TEXT,
+    "address2" TEXT,
+    "city" TEXT,
+    "zip" TEXT,
+    "province" TEXT,
+    "country" TEXT,
+    "ordersCount" INTEGER NOT NULL DEFAULT 0,
+    "firstOrderAt" TIMESTAMP(3) NOT NULL,
+    "lastOrderAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "StoreCustomer_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Notification" (
+    "id" TEXT NOT NULL,
+    "clientId" TEXT,
+    "audience" TEXT NOT NULL DEFAULT 'STAFF',
+    "tone" TEXT NOT NULL DEFAULT 'info',
+    "title" TEXT NOT NULL,
+    "body" TEXT,
+    "href" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Notification_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "SyncLock" (
+    "id" TEXT NOT NULL,
+    "lockedUntil" TIMESTAMP(3) NOT NULL,
+    "lastRunAt" TIMESTAMP(3),
+
+    CONSTRAINT "SyncLock_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE INDEX "StoreCustomer_clientId_idx" ON "StoreCustomer"("clientId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "StoreCustomer_storeId_key_key" ON "StoreCustomer"("storeId", "key");
+
+-- CreateIndex
+CREATE INDEX "Notification_createdAt_idx" ON "Notification"("createdAt");
+
+-- AddForeignKey
+ALTER TABLE "StoreCustomer" ADD CONSTRAINT "StoreCustomer_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "Client"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "StoreCustomer" ADD CONSTRAINT "StoreCustomer_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Notification" ADD CONSTRAINT "Notification_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "Client"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+
+-- Seguridad en Supabase: sin acceso por la API pública.
+ALTER TABLE "StoreCustomer" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Notification" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "SyncLock" ENABLE ROW LEVEL SECURITY;
+
+INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
+VALUES ('142489a0-ac98-42d0-abda-3b645aaed1a9', '1e652c6e81c1a088bd5a8008377f6f032066eec7fae43178778b05921f2aba05', now(), '20261012180000_v4_notifications_customers', 1);

@@ -4,12 +4,15 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { assertRole } from "@/lib/auth";
 import { issueInvoice } from "@/lib/billing";
+import { notify } from "@/lib/notifications";
+import { eur } from "@/lib/format";
 import { monthKey } from "@/lib/schedule";
 
 export async function issueInvoiceAction(clientId: string, month: string) {
   await assertRole(["ADMIN"]);
   if (month >= monthKey()) throw new Error("Solo se facturan meses cerrados");
-  await issueInvoice(clientId, month);
+  const invoice = await issueInvoice(clientId, month);
+  await notify({ title: `Factura ${invoice.number} emitida`, body: `Total ${eur(invoice.totalCents)}`, href: `/facturacion/${invoice.id}`, clientId, tone: "info", audience: "ALL" });
   revalidatePath("/facturacion");
 }
 

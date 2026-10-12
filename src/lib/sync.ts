@@ -1,6 +1,8 @@
 import type { Store } from "@prisma/client";
 import { db } from "@/lib/db";
 import { decrypt, encrypt } from "@/lib/crypto";
+import { notify } from "@/lib/notifications";
+import { ensureCustomersBackfilled, recordCustomer } from "@/lib/customers";
 import * as shopify from "@/lib/integrations/shopify";
 import * as woo from "@/lib/integrations/woocommerce";
 import type { ExternalOrder, ExternalProduct, Shipment } from "@/lib/types";
@@ -57,7 +59,8 @@ export async function testStoreConnection(store: StoreCreds): Promise<string> {
  * salvo que la tienda lo haya cancelado antes de enviarse.
  */
 export async function upsertOrders(store: Store, orders: ExternalOrder[]): Promise<number> {
-  let created = 0;
+  const createdIds: { id: string; number: string }[] = [];
+  const clientName = (await db.client.findUnique({ where: { id: store.clientId }, select: { name: true } }))?.name ?? store.name;
   for (const o of orders) {
     const existing = await db.order.findUnique({
       where: { storeId_externalId: { storeId: store.id, externalId: o.externalId } },
@@ -65,11 +68,18 @@ export async function upsertOrders(store: Store, orders: ExternalOrder[]): Promi
     if (existing) {
       if (o.cancelled && existing.status !== "SHIPPED" && existing.status !== "CANCELLED") {
         await db.order.update({ where: { id: existing.id }, data: { status: "CANCELLED" } });
+        await notify({
+          title: `Pedido ${existing.number} cancelado en la tienda`,
+          body: `${clientName} · no lo prepares${existing.status !== "PENDING" ? " (ya estaba en preparación)" : ""}`,
+          href: `/salida/${existing.id}`,
+          clientId: store.clientId,
+          tone: "danger",
+        });
       }
       continue;
     }
     if (o.cancelled) continue;
-    await db.order.create({
+    const order = await db.order.create({
       data: {
         clientId: store.clientId,
         storeId: store.id,
@@ -82,9 +92,17 @@ export async function upsertOrders(store: Store, orders: ExternalOrder[]): Promi
         items: { create: o.items },
       },
     });
-    created++;
+    createdIds.push({ id: order.id, number: order.number });
+    await recordCustomer({ clientId: store.clientId, storeId: store.id, customerName: o.customerName, email: o.email, placedAt: o.placedAt, shippingAddress: o.shippingAddress }).catch((err) =>
+      console.error("recordCustomer:", err),
+    );
   }
-  return created;
+  if (createdIds.length === 1) {
+    await notify({ title: `Pedido nuevo ${createdIds[0].number}`, body: clientName, href: `/salida/${createdIds[0].id}`, clientId: store.clientId, tone: "success" });
+  } else if (createdIds.length > 1) {
+    await notify({ title: `${createdIds.length} pedidos nuevos`, body: clientName, href: `/salida?client=${store.clientId}`, clientId: store.clientId, tone: "success" });
+  }
+  return createdIds.length;
 }
 
 async function upsertProducts(store: Store, products: ExternalProduct[]) {
@@ -98,26 +116,75 @@ async function upsertProducts(store: Store, products: ExternalProduct[]) {
   }
 }
 
-export async function syncStore(storeId: string): Promise<{ orders: number; products: number }> {
+const PRODUCTS_EVERY_MS = 30 * 60_000;
+
+/**
+ * Trae pedidos (y productos) de una tienda.
+ * products: true siempre · "auto" solo si hace más de 30 min de la última vez (sincronización automática).
+ */
+export async function syncStore(storeId: string, opts: { products?: boolean | "auto" } = {}): Promise<{ orders: number; products: number }> {
   const store = await db.store.findUniqueOrThrow({ where: { id: storeId } });
   if (store.isDemo) {
     await db.store.update({ where: { id: store.id }, data: { lastSyncAt: new Date(), lastSyncError: null } });
     return { orders: 0, products: 0 };
   }
+  const mode = opts.products ?? true;
+  const withProducts = mode === true || !store.productsSyncedAt || Date.now() - store.productsSyncedAt.getTime() > PRODUCTS_EVERY_MS;
   try {
-    const [products, orders] =
-      store.platform === "SHOPIFY"
-        ? await shopifyCreds(store).then((c) => Promise.all([shopify.fetchProducts(c), shopify.fetchOpenOrders(c)]))
-        : await Promise.all([woo.fetchProducts(wooCreds(store)), woo.fetchOpenOrders(wooCreds(store))]);
-    await upsertProducts(store, products);
+    let products: ExternalProduct[] = [];
+    let orders: ExternalOrder[];
+    if (store.platform === "SHOPIFY") {
+      const c = await shopifyCreds(store);
+      [products, orders] = await Promise.all([withProducts ? shopify.fetchProducts(c) : Promise.resolve([]), shopify.fetchOpenOrders(c)]);
+    } else {
+      const c = wooCreds(store);
+      [products, orders] = await Promise.all([withProducts ? woo.fetchProducts(c) : Promise.resolve([]), woo.fetchOpenOrders(c)]);
+    }
+    if (withProducts) await upsertProducts(store, products);
     const created = await upsertOrders(store, orders);
-    await db.store.update({ where: { id: store.id }, data: { lastSyncAt: new Date(), lastSyncError: null } });
+    await db.store.update({
+      where: { id: store.id },
+      data: { lastSyncAt: new Date(), lastSyncError: null, ...(withProducts && { productsSyncedAt: new Date() }) },
+    });
     return { orders: created, products: products.length };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    // Avisamos solo del primer fallo, no cada minuto.
+    if (!store.lastSyncError) {
+      await notify({ title: `Error al sincronizar ${store.name}`, body: message.slice(0, 160), href: `/tiendas/${store.id}`, clientId: store.clientId, tone: "danger" });
+    }
     await db.store.update({ where: { id: store.id }, data: { lastSyncError: message } });
     throw err;
   }
+}
+
+const LOCK_ID = "store-sync";
+
+/**
+ * Sincroniza todas las tiendas reales. Un cerrojo en la base de datos evita que dos
+ * procesos (o dos llamadas al cron) lo hagan a la vez.
+ */
+export async function syncAllStores(): Promise<{ ran: boolean; stores: number; orders: number; errors: number }> {
+  const now = new Date();
+  await db.syncLock.upsert({ where: { id: LOCK_ID }, create: { id: LOCK_ID, lockedUntil: new Date(0) }, update: {} });
+  const got = await db.syncLock.updateMany({ where: { id: LOCK_ID, lockedUntil: { lt: now } }, data: { lockedUntil: new Date(now.getTime() + 5 * 60_000) } });
+  if (!got.count) return { ran: false, stores: 0, orders: 0, errors: 0 };
+  let orders = 0;
+  let errors = 0;
+  await ensureCustomersBackfilled().catch((err) => console.error("[sync] clientes:", err));
+  const stores = await db.store.findMany({ where: { isDemo: false }, select: { id: true } });
+  try {
+    for (const s of stores) {
+      try {
+        orders += (await syncStore(s.id, { products: "auto" })).orders;
+      } catch {
+        errors++;
+      }
+    }
+  } finally {
+    await db.syncLock.update({ where: { id: LOCK_ID }, data: { lockedUntil: new Date(0), lastRunAt: new Date() } });
+  }
+  return { ran: true, stores: stores.length, orders, errors };
 }
 
 /**
@@ -141,6 +208,8 @@ export async function shipOrder(orderId: string, shipment: Shipment) {
     }
   }
 
+  const before = await db.product.findMany({ where: { clientId: order.clientId, sku: { in: order.items.map((i) => i.sku) } } });
+
   await db.$transaction([
     ...order.items.map((item) =>
       db.product.updateMany({
@@ -163,4 +232,20 @@ export async function shipOrder(orderId: string, shipment: Shipment) {
       },
     }),
   ]);
+
+  // Aviso de stock bajo (también al cliente) al cruzar el mínimo.
+  for (const p of before) {
+    const qty = order.items.filter((i) => i.sku === p.sku).reduce((n, i) => n + i.quantity, 0);
+    const after = p.stock - qty;
+    if (p.stock > p.lowStockAt && after <= p.lowStockAt) {
+      await notify({
+        title: after <= 0 ? `Agotado: ${p.name}` : `Stock bajo: ${p.name}`,
+        body: `Quedan ${Math.max(0, after)} uds. · ${p.sku}`,
+        href: `/inventario?q=${encodeURIComponent(p.sku)}`,
+        clientId: order.clientId,
+        tone: after <= 0 ? "danger" : "warning",
+        audience: "ALL",
+      });
+    }
+  }
 }

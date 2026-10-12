@@ -68,6 +68,8 @@ async function main() {
     console.error("Hay tiendas reales conectadas: el seed borraría datos de producción. Abortado.");
     process.exit(1);
   }
+  await db.notification.deleteMany();
+  await db.storeCustomer.deleteMany();
   await db.invoice.deleteMany();
   await db.return.deleteMany();
   await db.inbound.deleteMany();
@@ -88,6 +90,7 @@ async function main() {
       data: {
         name: c.name, contactEmail: c.email, plan: c.plan, planOrders: c.planOrders,
         monthlyFeeCents: c.fee, extraOrderFeeCents: c.extra, returnFeeCents: 150,
+        defaultShipping: c.name.startsWith("Lumi") ? "packia:GLS" : c.name.startsWith("Nordik") ? "packia:SEUR" : null,
         taxId: `B${int(10000000, 99999999)}`, billingAddress: `${pick(STREETS)}, ${int(1, 90)}\n${pick(CITIES)[1]} ${pick(CITIES)[0]}`,
       },
     });

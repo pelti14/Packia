@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { assertRole, canAccessClient } from "@/lib/auth";
+import { notify } from "@/lib/notifications";
 import type { FormState } from "@/app/actions";
 
 const str = (v: FormDataEntryValue | null) => (typeof v === "string" ? v.trim() : "");
@@ -33,6 +34,9 @@ export async function createReturn(_: FormState, form: FormData): Promise<FormSt
       items: { create: lines.map((l) => ({ sku: l.item.sku, name: l.item.name, quantity: l.qty })) },
     },
   });
+  if (user.role === "CLIENT") {
+    await notify({ title: `Devolución anunciada · ${order.number}`, body: user.clientName ?? undefined, href: `/devoluciones/${ret.id}`, clientId: order.clientId, tone: "info" });
+  }
   revalidatePath("/", "layout");
   redirect(`/devoluciones/${ret.id}`);
 }
@@ -64,6 +68,8 @@ export async function processReturn(returnId: string, _: FormState, form: FormDa
       data: { status: "PROCESSED", processedAt: new Date(), receivedAt: ret.receivedAt ?? new Date() },
     });
   });
+  const restocked = decisions.filter((d) => d.condition === "RESTOCK").reduce((n, d) => n + d.item.quantity, 0);
+  await notify({ title: "Devolución procesada", body: `${restocked} uds. vuelven a stock`, href: `/devoluciones/${returnId}`, clientId: ret.clientId, tone: "success", audience: "ALL" });
   revalidatePath("/", "layout");
   return { success: "Devolución procesada" };
 }

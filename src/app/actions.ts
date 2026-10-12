@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { assertRole } from "@/lib/auth";
 import { encrypt } from "@/lib/crypto";
-import { createLabel, estimateWeight, type LabelRequest } from "@/lib/labels";
+import { createLabel, estimateWeight, listShippingMethods, type LabelRequest } from "@/lib/labels";
 import { registerShopifyWebhooks, shipOrder, syncStore, testStoreConnection } from "@/lib/sync";
 import { getAppUrl } from "@/lib/app-url";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
@@ -81,6 +81,35 @@ export async function updateClient(clientId: string, _: FormState, form: FormDat
   });
   revalidatePath("/", "layout");
   return { success: "Cliente actualizado", values };
+}
+
+/** Envíos del cliente: repartidor por defecto y cuenta de Sendcloud propia (opcional). */
+export async function updateClientShipping(clientId: string, _: FormState, form: FormData): Promise<FormState> {
+  await assertRole(["ADMIN"]);
+  const defaultShipping = str(form.get("defaultShipping"));
+  if (defaultShipping && !/^(packia:[\w ]+|sendcloud:\d+)$/.test(defaultShipping)) return { error: "Envío por defecto no válido" };
+  const data: { defaultShipping: string | null; sendcloudPublicKey?: string | null; sendcloudSecretKey?: string | null } = { defaultShipping: defaultShipping || null };
+  if (form.get("clearSendcloud")) {
+    data.sendcloudPublicKey = null;
+    data.sendcloudSecretKey = null;
+  } else {
+    const pk = str(form.get("sendcloudPublicKey"));
+    const sk = str(form.get("sendcloudSecretKey"));
+    if (pk || sk) {
+      if (!pk || !sk) return { error: "Para conectar su Sendcloud hacen falta las dos claves" };
+      try {
+        await listShippingMethods({ publicKey: pk, secretKey: sk });
+      } catch (err) {
+        return { error: `Sendcloud no acepta esas claves: ${message(err)}` };
+      }
+      data.sendcloudPublicKey = encrypt(pk);
+      data.sendcloudSecretKey = encrypt(sk);
+    }
+  }
+  await db.client.update({ where: { id: clientId }, data });
+  revalidatePath(`/clientes/${clientId}`);
+  revalidatePath("/salida", "layout");
+  return { success: "Envíos guardados" };
 }
 
 // ─── Tiendas ────────────────────────────────────────────────
@@ -230,6 +259,27 @@ export async function advanceOrders(form: FormData) {
   for (const o of orders) {
     await db.order.update({ where: { id: o.id }, data: { status: o.status === "PENDING" ? "PICKING" : "PACKED" } });
   }
+  revalidatePath("/", "layout");
+}
+
+/** Marca como embalado (desde Pendiente o Preparando). */
+export async function packOrder(orderId: string) {
+  await assertRole(["ADMIN", "STAFF"]);
+  await db.order.updateMany({ where: { id: orderId, status: { in: ["PENDING", "PICKING"] } }, data: { status: "PACKED" } });
+  revalidatePath("/", "layout");
+}
+
+/** Deshace la preparación: vuelve a Pendiente (por si nos hemos confundido). No aplica a pedidos ya enviados. */
+export async function revertOrder(orderId: string) {
+  await assertRole(["ADMIN", "STAFF"]);
+  await db.order.updateMany({ where: { id: orderId, status: { in: ["PICKING", "PACKED"] } }, data: { status: "PENDING" } });
+  revalidatePath("/", "layout");
+}
+
+export async function revertOrders(form: FormData) {
+  await assertRole(["ADMIN", "STAFF"]);
+  const ids = form.getAll("ids").map(String);
+  await db.order.updateMany({ where: { id: { in: ids }, status: { in: ["PICKING", "PACKED"] } }, data: { status: "PENDING" } });
   revalidatePath("/", "layout");
 }
 

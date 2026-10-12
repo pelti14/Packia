@@ -1,14 +1,25 @@
 import { Boxes, Layers, PackageX, TriangleAlert } from "lucide-react";
 import { db } from "@/lib/db";
 import { clientScope, isStaff, requireUser } from "@/lib/auth";
-import { Card, EmptyState, PageHeader, StatCard } from "@/components/ui";
+import { Card, EmptyState, PageHeader, SearchBar, StatCard } from "@/components/ui";
 import { ProductRow } from "./product-row";
 
-export default async function InventoryPage({ searchParams }: { searchParams: Promise<{ client?: string }> }) {
-  const { client } = await searchParams;
+export default async function InventoryPage({ searchParams }: { searchParams: Promise<{ client?: string; q?: string }> }) {
+  const { client, q } = await searchParams;
   const user = await requireUser();
   const staff = isStaff(user);
-  const scope = { ...clientScope(user), ...(client && staff ? { clientId: client } : {}) };
+  const scope = {
+    ...clientScope(user),
+    ...(client && staff ? { clientId: client } : {}),
+    ...(q && {
+      OR: [
+        { sku: { contains: q, mode: "insensitive" as const } },
+        { name: { contains: q, mode: "insensitive" as const } },
+        { location: { contains: q, mode: "insensitive" as const } },
+        { client: { name: { contains: q, mode: "insensitive" as const } } },
+      ],
+    }),
+  };
   const [products, clients] = await Promise.all([
     db.product.findMany({
       where: scope,
@@ -30,6 +41,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
         description="Las referencias se importan de cada tienda. El stock sube con cada recepción y devolución, y baja con cada envío."
         actions={
           staff && <form className="flex gap-2">
+            {q && <input type="hidden" name="q" value={q} />}
             <select name="client" defaultValue={client ?? ""} className="input w-56">
               <option value="">Todos los clientes</option>
               {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -38,6 +50,10 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
           </form>
         }
       />
+
+      <div className="mb-4">
+        <SearchBar placeholder="Buscar producto, SKU, ubicación o cliente…" defaultValue={q} keep={{ client }} />
+      </div>
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard label="Referencias" value={products.length} icon={Layers} tone="brand" />

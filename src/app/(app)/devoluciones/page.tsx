@@ -4,16 +4,27 @@ import { db } from "@/lib/db";
 import { clientScope, requireUser } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import { RETURN_STATUS_LABEL } from "@/lib/types";
-import { Card, EmptyState, PageHeader, Pill, Tabs } from "@/components/ui";
+import { Card, EmptyState, PageHeader, Pill, SearchBar, Tabs } from "@/components/ui";
+import type { Prisma } from "@prisma/client";
 
 const STATUSES = ["ANNOUNCED", "RECEIVED", "PROCESSED"] as const;
 const TONE = { ANNOUNCED: "amber", RECEIVED: "aqua", PROCESSED: "mint" } as const;
 
-export default async function DevolucionesPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
-  const { tab: t } = await searchParams;
+export default async function DevolucionesPage({ searchParams }: { searchParams: Promise<{ tab?: string; q?: string }> }) {
+  const { tab: t, q } = await searchParams;
   const tab = STATUSES.find((s) => s === t) ?? "ANNOUNCED";
   const user = await requireUser();
-  const scope = clientScope(user);
+  const search: Prisma.ReturnWhereInput = q
+    ? {
+        OR: [
+          { client: { name: { contains: q, mode: "insensitive" } } },
+          { order: { number: { contains: q, mode: "insensitive" } } },
+          { order: { customerName: { contains: q, mode: "insensitive" } } },
+          { items: { some: { OR: [{ sku: { contains: q, mode: "insensitive" } }, { name: { contains: q, mode: "insensitive" } }] } } },
+        ],
+      }
+    : {};
+  const scope = { ...clientScope(user), ...search };
 
   const [returns, counts] = await Promise.all([
     db.return.findMany({
@@ -35,11 +46,12 @@ export default async function DevolucionesPage({ searchParams }: { searchParams:
         actions={<Link href="/devoluciones/nueva" className="btn-primary"><Plus className="h-4 w-4" /> Registrar devolución</Link>}
       />
 
-      <div className="mb-4">
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <Tabs
           active={tab}
-          tabs={STATUSES.map((s) => ({ key: s, label: s === "ANNOUNCED" ? "Anunciadas" : s === "RECEIVED" ? "Por revisar" : "Procesadas", href: `/devoluciones?tab=${s}`, count: count(s) }))}
+          tabs={STATUSES.map((s) => ({ key: s, label: s === "ANNOUNCED" ? "Anunciadas" : s === "RECEIVED" ? "Por revisar" : "Procesadas", href: `/devoluciones?tab=${s}${q ? `&q=${encodeURIComponent(q)}` : ""}`, count: count(s) }))}
         />
+        <SearchBar placeholder="Buscar pedido, cliente, producto o SKU…" defaultValue={q} keep={{ tab }} />
       </div>
 
       <Card className="overflow-hidden">

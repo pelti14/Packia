@@ -4,8 +4,8 @@ import { clsx } from "clsx";
 import { Check, ExternalLink, MapPin, PackageOpen, Printer, RotateCcw, Truck } from "lucide-react";
 import { db } from "@/lib/db";
 import { canAccessClient, isStaff, requireUser } from "@/lib/auth";
-import { advanceOrder } from "@/app/actions";
-import { estimateWeight, listShippingMethods } from "@/lib/labels";
+import { advanceOrder, revertOrder } from "@/app/actions";
+import { estimateWeight, shippingOptionsFor } from "@/lib/labels";
 import { formatDate, parseAddress } from "@/lib/format";
 import { urgency } from "@/lib/schedule";
 import { ORDER_FLOW, STATUS_LABEL, type OrderStatus } from "@/lib/types";
@@ -34,15 +34,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   const open = ["PENDING", "PICKING", "PACKED"].includes(status);
   const u = urgency(order.placedAt);
 
-  let methods: Awaited<ReturnType<typeof listShippingMethods>> = [];
-  let methodsError: string | null = null;
-  if (staff && status === "PACKED") {
-    try {
-      methods = await listShippingMethods();
-    } catch (err) {
-      methodsError = err instanceof Error ? err.message : String(err);
-    }
-  }
+  const shipping = staff && status === "PACKED" ? await shippingOptionsFor(order.client) : null;
 
   return (
     <>
@@ -165,8 +157,8 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                 <Notice>{status === "CANCELLED" ? "Pedido cancelado en la tienda." : "En preparación en el almacén."}</Notice>
               ) : status === "PACKED" ? (
                 <>
-                  {methodsError && <Notice tone="error">Sendcloud no disponible: {methodsError}</Notice>}
-                  <ShipForm orderId={order.id} weightGrams={await estimateWeight(order)} sendcloudMethods={methods} />
+                  {shipping?.error && <Notice tone="error">Sendcloud no disponible: {shipping.error}</Notice>}
+                  <ShipForm orderId={order.id} weightGrams={await estimateWeight(order)} options={shipping!.options} defaultValue={shipping!.defaultValue} />
                 </>
               ) : status !== "CANCELLED" ? (
                 <form action={advanceOrder.bind(null, order.id)}>
@@ -174,6 +166,12 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                 </form>
               ) : (
                 <Notice tone="error">Pedido cancelado en la tienda. No preparar.</Notice>
+              )}
+
+              {staff && (status === "PICKING" || status === "PACKED") && (
+                <form action={revertOrder.bind(null, order.id)}>
+                  <SubmitButton variant="ghost" className="w-full">↺ Volver a pendiente (deshacer preparación)</SubmitButton>
+                </form>
               )}
 
               {order.syncError && <Notice tone="error">No se pudo avisar a la tienda: {order.syncError}</Notice>}
