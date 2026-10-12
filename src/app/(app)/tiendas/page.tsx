@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth";
 import { timeAgo } from "@/lib/format";
 import { Card, EmptyState, PageHeader, PlatformBadge } from "@/components/ui";
 import { SyncButton } from "./sync-button";
+import { BrandName } from "@/components/brand";
 
 export default async function StoresPage() {
   const user = await requireUser(["ADMIN", "STAFF"]);
@@ -18,7 +19,7 @@ export default async function StoresPage() {
       <PageHeader
         eyebrow="Integraciones"
         title="Tiendas conectadas"
-        description="Cada tienda envía sus pedidos pagados a Packia al instante mediante webhooks. La sincronización manual recupera los pendientes."
+        description={<>Cada tienda envía sus pedidos pagados a <BrandName /> al instante mediante webhooks. La sincronización manual recupera los pendientes.</>}
         actions={user.role === "ADMIN" && <Link href="/tiendas/nueva" className="btn-primary"><Plus className="h-4 w-4" /> Conectar tienda</Link>}
       />
 

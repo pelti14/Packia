@@ -6,8 +6,10 @@ import { StatusList } from "@/components/status-list";
 import { MigrateForm } from "@/app/setup/forms";
 import { SettingsForm } from "./settings-form";
 import { PlansForm } from "./plans-form";
+import { BrandForm } from "./brand-form";
 import { getPlans } from "@/lib/plans";
 import { getAppUrl } from "@/lib/app-url";
+import { BrandName } from "@/components/brand";
 
 export default async function AjustesPage({ searchParams }: { searchParams: Promise<{ bienvenida?: string }> }) {
   await requireUser(["ADMIN"]);
@@ -32,13 +34,14 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
       {bienvenida && (
         <div className="mb-6">
           <Notice tone="success">
-            ¡Packia está listo! Siguientes pasos: rellena estos datos, crea tus clientes en <b>Clientes</b>, conecta sus tiendas en <b>Tiendas</b> y da acceso a tu equipo en <b>Usuarios</b>.
+            ¡<BrandName /> está listo! Siguientes pasos: rellena estos datos, crea tus clientes en <b>Clientes</b>, conecta sus tiendas en <b>Tiendas</b> y da acceso a tu equipo en <b>Usuarios</b>.
           </Notice>
         </div>
       )}
 
       <div className="grid items-start gap-6 2xl:grid-cols-3">
         <div className="2xl:col-span-2">
+          <div className="mb-6"><BrandForm publicUrl={`${appUrl}/api/public/planes`} /></div>
           <SettingsForm initial={initial} sendcloudSaved={Boolean(settings?.sendcloudPublicKey && settings?.sendcloudSecretKey)} autoInvoice={settings?.autoInvoice ?? true} />
           <div className="mt-6"><PlansForm plans={plans} publicUrl={`${appUrl}/api/public/planes`} /></div>
         </div>

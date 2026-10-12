@@ -10,6 +10,7 @@ import { BackLink, Card, CardHeader, Notice, PageHeader, PlatformBadge, StatusBa
 import { SyncButton } from "../sync-button";
 import { CopyField } from "./copy-field";
 import { WebhooksButton } from "./webhooks-button";
+import { BrandName } from "@/components/brand";
 
 
 export default async function StorePage({ params }: { params: Promise<{ id: string }> }) {
@@ -58,9 +59,9 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
             <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed text-ink-700 marker:font-semibold marker:text-brand-500">
               {shopify ? (
                 <>
-                  <li>Packia crea automáticamente en Shopify los webhooks de <b>pedido creado</b> y <b>pedido cancelado</b> al conectar la tienda.</li>
+                  <li><BrandName /> crea automáticamente en Shopify los webhooks de <b>pedido creado</b> y <b>pedido cancelado</b> al conectar la tienda.</li>
                   <li>Si cambias de dominio o has borrado los webhooks, pulsa el botón de abajo para crearlos de nuevo.</li>
-                  <li>Cada aviso llega firmado con la clave secreta de la app y Packia lo verifica.</li>
+                  <li>Cada aviso llega firmado con la clave secreta de la app y <BrandName /> lo verifica.</li>
                 </>
               ) : (
                 <>

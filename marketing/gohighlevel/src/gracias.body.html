@@ -14,3 +14,31 @@
 </div></section>
 </div>
 <script>try{if(window.fbq)fbq('track','Lead')}catch(e){}</script>
+<script>
+/* Marca y precios en directo desde tu app (Ajustes → Marca / Planes y precios).
+   Si no responde, se queda lo escrito arriba. */
+(function(){
+  var URL_APP="{{PACKIA_URL}}";
+  if(!URL_APP||URL_APP.indexOf("{{")===0)return;
+  var fmt=function(n,dec){return n.toLocaleString("es-ES",{minimumFractionDigits:dec,maximumFractionDigits:dec})};
+  var all=function(sel,fn){document.querySelectorAll(sel).forEach(fn)};
+  fetch(URL_APP.replace(/\/+$/,"")+"/api/public/planes").then(function(r){return r.json()}).then(function(d){
+    var b=d.brand;
+    if(b&&b.name){
+      all('[data-pk="brand.name"]',function(el){el.textContent=b.name});
+      all('[data-pk="brand.tagline"]',function(el){el.textContent=b.tagline||""});
+      if(b.name!=="Packia")all('[data-pk-wordmark]',function(el){el.textContent=b.name});
+      if(b.logo)all('[data-pk-logo]',function(el){var i=document.createElement("img");i.src=b.logo;i.alt=b.name;i.width=38;i.height=38;i.style.borderRadius="11px";i.style.objectFit="contain";el.replaceWith(i)});
+      document.title=document.title.replace(/Packia/g,b.name);
+      all('a[href*="wa.me"]',function(a){a.href=a.href.replace(/Packia/g,encodeURIComponent(b.name))});
+    }
+    var min=null;
+    (d.plans||[]).forEach(function(p){
+      min=min===null?p.fee:Math.min(min,p.fee);
+      var set=function(field,val){all('[data-pk="'+p.key+'.'+field+'"]',function(el){el.textContent=val})};
+      set("label",p.label);set("fee",fmt(p.fee,p.fee%1?2:0));set("orders",fmt(p.orders,0));set("extra",fmt(p.extra,2));
+    });
+    if(min!==null)all('[data-pk="min.fee"]',function(el){el.textContent=fmt(min,min%1?2:0)});
+  }).catch(function(){});
+})();
+</script>

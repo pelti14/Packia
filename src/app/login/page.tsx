@@ -1,6 +1,6 @@
 import { Boxes, PackageCheck, Truck } from "lucide-react";
 import { redirect } from "next/navigation";
-import { Logo, LogoMark } from "@/components/logo";
+import { BrandWordmark, Logo, LogoMark } from "@/components/logo";
 import { needsSetup } from "@/lib/setup";
 import { LoginForm } from "./login-form";
 import { FrameNotice } from "./frame-notice";
@@ -24,7 +24,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-violet-400/40 blur-3xl" />
         <div className="relative flex items-center gap-2.5">
           <LogoMark className="h-10 w-10 ring-2 ring-white/40 rounded-[11px]" />
-          <span className="font-display text-2xl font-bold">packia</span>
+          <BrandWordmark plain className="font-display text-2xl font-bold" />
         </div>
         <div className="relative mt-auto max-w-md">
           <h1 className="text-5xl font-bold leading-[1.05]">Tú vendes.<br />Nosotros lo enviamos.</h1>

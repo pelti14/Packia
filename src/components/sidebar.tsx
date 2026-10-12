@@ -11,6 +11,7 @@ import type { Badge, Badges } from "@/lib/notifications";
 import { Logo } from "@/components/logo";
 import { signOut } from "@/app/auth-actions";
 import type { Role } from "@/lib/auth";
+import { BrandName } from "@/components/brand";
 
 type Item = { href: string; label: string; icon: LucideIcon; roles: Role[]; badge?: keyof Badges };
 
@@ -87,7 +88,7 @@ export function Sidebar({ role, user }: { role: Role; user: { name: string; deta
         ))}
       </nav>
 
-      <div className="mt-auto mb-2 px-3 text-[10px] font-medium text-ink-400">Packia v{process.env.NEXT_PUBLIC_APP_VERSION}</div>
+      <div className="mt-auto mb-2 px-3 text-[10px] font-medium text-ink-400"><BrandName /> v{process.env.NEXT_PUBLIC_APP_VERSION}</div>
       <div className="rounded-2xl border border-brand-100 bg-gradient-to-br from-brand-50 via-white to-aqua-50 p-3">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-aqua-500 text-sm font-bold text-white">
@@ -124,7 +125,7 @@ export function MobileNav({ role }: { role: Role }) {
             {rest.map((item) => (
               <NavLink key={item.href} item={item} active={isActive(pathname, item.href)} badge={item.badge && badges[item.badge]} onNavigate={() => setOpen(false)} />
             ))}
-            <div className="px-3 pt-2 text-[10px] text-ink-400">Packia v{process.env.NEXT_PUBLIC_APP_VERSION}</div>
+            <div className="px-3 pt-2 text-[10px] text-ink-400"><BrandName /> v{process.env.NEXT_PUBLIC_APP_VERSION}</div>
           </div>
         </div>
       )}

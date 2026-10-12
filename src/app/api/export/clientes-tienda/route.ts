@@ -21,7 +21,7 @@ export async function GET(req: Request) {
   const where = customerWhere(user, { client: sp.get("client") ?? undefined, store: sp.get("store") ?? undefined, q: sp.get("q") ?? undefined });
   const rows = await db.storeCustomer.findMany({ where, include: { store: true, client: true }, orderBy: { lastOrderAt: "desc" } });
 
-  const header = ["Nombre", "Email", "Teléfono", "Dirección", "Dirección 2", "C. P.", "Ciudad", "Provincia", "País", "Tienda", "Cliente Packia", "Pedidos", "Primer pedido", "Último pedido"];
+  const header = ["Nombre", "Email", "Teléfono", "Dirección", "Dirección 2", "C. P.", "Ciudad", "Provincia", "País", "Tienda", "Cliente", "Pedidos", "Primer pedido", "Último pedido"];
   const lines = rows.map((r) =>
     [r.name, r.email, r.phone, r.address1, r.address2, r.zip, r.city, r.province, r.country, r.store.name, r.client.name, r.ordersCount, r.firstOrderAt, r.lastOrderAt].map(cell).join(";"),
   );

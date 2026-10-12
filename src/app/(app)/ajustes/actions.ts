@@ -104,3 +104,28 @@ export async function savePlans(_: FormState, form: FormData): Promise<FormState
       : "Precios guardados. Se usarán para los clientes nuevos y los cambios de plan",
   };
 }
+
+const LOGO_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
+
+/** Marca comercial: nombre, texto bajo el nombre y logo. Se ve en toda la app y en la web de GoHighLevel. */
+export async function saveBrand(_: FormState, form: FormData): Promise<FormState> {
+  await assertRole(["ADMIN"]);
+  const name = str(form.get("brandName")).slice(0, 40);
+  const tagline = str(form.get("brandTagline")).slice(0, 40);
+  const values = { brandName: name, brandTagline: tagline };
+  const data: { brandName: string | null; brandTagline: string | null; brandLogo?: string | null } = { brandName: name || null, brandTagline: tagline || null };
+
+  const file = form.get("brandLogo");
+  if (form.get("removeLogo")) {
+    data.brandLogo = null;
+  } else if (file instanceof File && file.size > 0) {
+    if (!LOGO_TYPES.includes(file.type)) return { error: "El logo tiene que ser PNG, JPG, WEBP o SVG", values };
+    if (file.size > 300 * 1024) return { error: "El logo pesa demasiado (máximo 300 KB)", values };
+    const bytes = Buffer.from(await file.arrayBuffer());
+    if (file.type === "image/svg+xml" && /<script|on\w+\s*=|javascript:/i.test(bytes.toString("utf8"))) return { error: "Ese SVG contiene código: expórtalo de nuevo como imagen limpia o usa PNG", values };
+    data.brandLogo = `data:${file.type};base64,${bytes.toString("base64")}`;
+  }
+  await db.appSettings.upsert({ where: { id: "default" }, create: { id: "default", ...data }, update: data });
+  revalidatePath("/", "layout");
+  return { success: name ? `Marca guardada: ${name}` : "Marca guardada (se usa «Packia»)", values };
+}

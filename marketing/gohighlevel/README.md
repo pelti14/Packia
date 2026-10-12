@@ -15,8 +15,12 @@ Para ver cómo quedan, abre cada archivo en el navegador (doble clic).
 > - `hola@packia.es` → tu email.
 > - `https://floralwhite-dugong-101545.hostingersite.com` → la dirección de tu Packia, si cambias de dominio.
 
-### Precios conectados con Packia
-La web y la landing leen los precios en directo de Packia (`/api/public/planes`). Si los cambias en **Packia → Ajustes → Planes y precios**, la web se actualiza sola en unos minutos, sin tocar GoHighLevel. Si Packia no responde, se muestran los precios escritos en el HTML.
+### Marca y precios conectados con la app
+**Cómo se conecta, si GHL no tiene API con la app:** no hace falta. El HTML que pegas en GHL lleva un pequeño script. Cada vez que alguien abre la web, su navegador pide a tu app (`https://tu-app/api/public/planes`) el nombre, el logo y los precios, y los pone en la página. Es como cuando una web enseña el tiempo de otra página.
+- Esa dirección es pública a propósito: solo da nombre, eslogan, logo y precios. Nunca datos de clientes ni pedidos.
+- Si cambias algo en **Ajustes → Marca** o **Ajustes → Planes y precios**, la web lo muestra en unos minutos, sin tocar GoHighLevel.
+- Si la app no responde, la web enseña lo que lleva escrito el HTML («Packia» y los precios de serie).
+- Lo que el script no puede cambiar: el **nombre de la página y del dominio en GHL** y el **texto de los anuncios de Meta**. Eso se cambia a mano.
 
 Los archivos fuente están en `src/`. Para regenerar las páginas: `python3 marketing/gohighlevel/src/build.py marketing/gohighlevel/src marketing/gohighlevel`.
 

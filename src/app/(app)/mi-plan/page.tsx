@@ -11,6 +11,7 @@ import { downgradePlan, requestCancellation, upgradePlan, withdrawRequest } from
 import { ConfirmSubmit } from "@/components/confirm-submit";
 import { SubmitButton } from "@/components/submit-button";
 import { Card, CardHeader, Notice, PageHeader, Pill } from "@/components/ui";
+import { BrandName } from "@/components/brand";
 
 export default async function MiPlanPage({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string; c?: string }> }) {
   const user = await requireUser();
@@ -79,7 +80,7 @@ export default async function MiPlanPage({ searchParams }: { searchParams: Promi
           )}
           {cancel && (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-rose-50 px-5 py-4 text-sm text-ink-700 ring-1 ring-rose-500/20">
-              <span>Has solicitado la baja con último día <b>{formatDateOnly(cancel.effectiveAt)}</b>. Pendiente de confirmar por Packia.</span>
+              <span>Has solicitado la baja con último día <b>{formatDateOnly(cancel.effectiveAt)}</b>. Pendiente de confirmar por <BrandName />.</span>
               <form action={withdrawRequest.bind(null, cancel.id, "/mi-plan")}><SubmitButton variant="ghost" className="px-3 py-1.5">Ya no quiero darme de baja</SubmitButton></form>
             </div>
           )}

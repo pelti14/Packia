@@ -23,7 +23,7 @@ export function SettingsForm({ initial, sendcloudSaved, autoInvoice }: { initial
           <h2 className="text-base font-semibold">Datos fiscales</h2>
           <p className="text-xs text-ink-500">Aparecen en las facturas.</p>
         </div>
-        <Field id="companyName" label="Razón social" initial={values} placeholder="Packia Fulfillment S.L." />
+        <Field id="companyName" label="Razón social" initial={values} placeholder="Mi Empresa Logística S.L." />
         <div className="grid grid-cols-2 gap-3">
           <Field id="companyTaxId" label="NIF / CIF" initial={values} />
           <Field id="companyEmail" label="Email de facturación" initial={values} type="email" />
@@ -37,7 +37,7 @@ export function SettingsForm({ initial, sendcloudSaved, autoInvoice }: { initial
           <h2 className="text-base font-semibold">Almacén (remitente)</h2>
           <p className="text-xs text-ink-500">Aparece en las etiquetas de envío.</p>
         </div>
-        <Field id="senderName" label="Nombre" initial={values} placeholder="Packia Fulfillment" />
+        <Field id="senderName" label="Nombre" initial={values} placeholder="Mi Empresa Logística" />
         <Field id="senderAddress" label="Dirección" initial={values} />
         <div className="grid grid-cols-3 gap-3">
           <Field id="senderZip" label="C. P." initial={values} />
@@ -53,7 +53,7 @@ export function SettingsForm({ initial, sendcloudSaved, autoInvoice }: { initial
       <section className="glass flex items-start justify-between gap-4 p-6 xl:col-span-2">
         <div>
           <h2 className="text-base font-semibold">Facturación automática</h2>
-          <p className="text-xs text-ink-500">Del día 1 al 5 de cada mes, Packia emite sola las facturas del mes anterior y avisa a cada cliente. Si la desactivas, emítelas con el botón de Facturación.</p>
+          <p className="text-xs text-ink-500">Del día 1 al 5 de cada mes, la app emite sola las facturas del mes anterior y avisa a cada cliente. Si la desactivas, emítelas con el botón de Facturación.</p>
         </div>
         <label className="flex shrink-0 cursor-pointer items-center gap-2 text-sm font-medium text-ink-700">
           <input type="checkbox" name="autoInvoice" defaultChecked={autoInvoice} className="h-5 w-5 accent-brand-500" /> Activada

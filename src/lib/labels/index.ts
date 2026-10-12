@@ -6,6 +6,7 @@ import { getSettings } from "@/lib/settings";
 import { CARRIERS } from "@/lib/types";
 import { internalTrackingNumber, mergePdfs, renderInternalLabel } from "./packia";
 import * as sendcloud from "./sendcloud";
+import { getBrand } from "@/lib/brand";
 
 export { sendcloudEnabled, listShippingMethods } from "./sendcloud";
 export { mergePdfs };
@@ -30,7 +31,7 @@ export async function shippingOptionsFor(client: Client): Promise<{ options: Shi
   if (sc) {
     try {
       const methods = await sendcloud.listShippingMethods(sc.keys);
-      const group = sc.own ? `Sendcloud de ${client.name}` : "Sendcloud de Packia";
+      const group = sc.own ? `Sendcloud de ${client.name}` : `Sendcloud de ${(await getBrand()).name}`;
       options.push(...methods.map((m) => ({ value: `sendcloud:${m.id}`, label: m.name, group })));
     } catch (err) {
       error = err instanceof Error ? err.message : String(err);
@@ -101,5 +102,5 @@ export async function labelPdf(order: FullOrder): Promise<Uint8Array> {
       address: parseAddress(order.shippingAddress),
     });
   }
-  throw new Error("Este pedido no tiene etiqueta generada por Packia");
+  throw new Error("Este pedido no tiene etiqueta interna generada");
 }

@@ -3,6 +3,7 @@ import { Logo } from "@/components/logo";
 import { Card } from "@/components/ui";
 import { MigrateForm } from "@/app/setup/forms";
 import { signOut } from "@/app/auth-actions";
+import { BrandName } from "@/components/brand";
 
 /** Se muestra cuando hay una versión nueva con cambios de base de datos pendientes. */
 export function UpdateScreen({ isAdmin, count }: { isAdmin: boolean; count: number }) {
@@ -18,13 +19,13 @@ export function UpdateScreen({ isAdmin, count }: { isAdmin: boolean; count: numb
         {isAdmin ? (
           <>
             <p className="text-sm text-ink-700">
-              Has instalado una versión nueva de Packia que necesita actualizar la base de datos ({count} {count === 1 ? "cambio" : "cambios"}). Tus datos se mantienen.
+              Has instalado una versión nueva de <BrandName /> que necesita actualizar la base de datos ({count} {count === 1 ? "cambio" : "cambios"}). Tus datos se mantienen.
             </p>
             <MigrateForm label="Actualizar ahora" />
             <p className="text-xs text-ink-500">Al terminar entrarás automáticamente. Si no, <a href="/" className="font-medium text-brand-600 hover:underline">pulsa aquí</a>.</p>
           </>
         ) : (
-          <p className="text-sm text-ink-700">Packia se está actualizando. Avisa al administrador para que complete la actualización y vuelve a entrar en unos minutos.</p>
+          <p className="text-sm text-ink-700"><BrandName /> se está actualizando. Avisa al administrador para que complete la actualización y vuelve a entrar en unos minutos.</p>
         )}
         <form action={signOut}>
           <button className="text-xs text-ink-400 hover:text-ink-700">Cerrar sesión</button>

@@ -147,7 +147,7 @@
 @media(max-width:520px){.pk .mock-title{font-size:.9rem}.pk .clock{font-size:.68rem;padding:5px 8px}.pk .stat div{font-size:1.3rem}}
 </style>
 <div class="pk" id="inicio" style="min-height:100vh">
-<nav class="nav"><div class="wrap"><a href="#inicio" class="logo"><svg width="38" height="38" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="pkg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3a52f0"/><stop offset=".55" stop-color="#4f6bff"/><stop offset="1" stop-color="#12c8d9"/></linearGradient></defs><rect width="40" height="40" rx="11" fill="url(#pkg)"/><path d="M20 8.5 30 14v12l-10 5.5L10 26V14z" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/><path d="M10 14l10 5.5L30 14M20 19.5v12" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round" opacity=".8"/><circle cx="30" cy="10" r="2.6" fill="#a5f3fc"/></svg><span><b>pack<span class="grad">ia</span></b><small>fulfillment</small></span></a></div></nav>
+<nav class="nav"><div class="wrap"><a href="#inicio" class="logo"><svg data-pk-logo width="38" height="38" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="pkg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3a52f0"/><stop offset=".55" stop-color="#4f6bff"/><stop offset="1" stop-color="#12c8d9"/></linearGradient></defs><rect width="40" height="40" rx="11" fill="url(#pkg)"/><path d="M20 8.5 30 14v12l-10 5.5L10 26V14z" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/><path d="M10 14l10 5.5L30 14M20 19.5v12" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round" opacity=".8"/><circle cx="30" cy="10" r="2.6" fill="#a5f3fc"/></svg><span><b data-pk-wordmark>pack<span class="grad">ia</span></b><small data-pk="brand.tagline">fulfillment</small></span></a></div></nav>
 <section class="hero" style="padding:100px 0"><div class="grid-bg"></div><div class="glow" style="width:420px;height:420px;background:#22c993;top:-160px;left:50%;margin-left:-210px;opacity:.3"></div>
 <div class="wrap center" style="position:relative">
   <div class="ico" style="margin:0 auto 22px;width:64px;height:64px;font-size:1.8rem;background:#e7faf3;box-shadow:inset 0 0 0 1px rgba(34,201,147,.3)">✓</div>
@@ -162,6 +162,34 @@
 </div></section>
 </div>
 <script>try{if(window.fbq)fbq('track','Lead')}catch(e){}</script>
+<script>
+/* Marca y precios en directo desde tu app (Ajustes → Marca / Planes y precios).
+   Si no responde, se queda lo escrito arriba. */
+(function(){
+  var URL_APP="https://floralwhite-dugong-101545.hostingersite.com";
+  if(!URL_APP||URL_APP.indexOf("{{")===0)return;
+  var fmt=function(n,dec){return n.toLocaleString("es-ES",{minimumFractionDigits:dec,maximumFractionDigits:dec})};
+  var all=function(sel,fn){document.querySelectorAll(sel).forEach(fn)};
+  fetch(URL_APP.replace(/\/+$/,"")+"/api/public/planes").then(function(r){return r.json()}).then(function(d){
+    var b=d.brand;
+    if(b&&b.name){
+      all('[data-pk="brand.name"]',function(el){el.textContent=b.name});
+      all('[data-pk="brand.tagline"]',function(el){el.textContent=b.tagline||""});
+      if(b.name!=="Packia")all('[data-pk-wordmark]',function(el){el.textContent=b.name});
+      if(b.logo)all('[data-pk-logo]',function(el){var i=document.createElement("img");i.src=b.logo;i.alt=b.name;i.width=38;i.height=38;i.style.borderRadius="11px";i.style.objectFit="contain";el.replaceWith(i)});
+      document.title=document.title.replace(/Packia/g,b.name);
+      all('a[href*="wa.me"]',function(a){a.href=a.href.replace(/Packia/g,encodeURIComponent(b.name))});
+    }
+    var min=null;
+    (d.plans||[]).forEach(function(p){
+      min=min===null?p.fee:Math.min(min,p.fee);
+      var set=function(field,val){all('[data-pk="'+p.key+'.'+field+'"]',function(el){el.textContent=val})};
+      set("label",p.label);set("fee",fmt(p.fee,p.fee%1?2:0));set("orders",fmt(p.orders,0));set("extra",fmt(p.extra,2));
+    });
+    if(min!==null)all('[data-pk="min.fee"]',function(el){el.textContent=fmt(min,min%1?2:0)});
+  }).catch(function(){});
+})();
+</script>
 
 <!-- ▲▲▲ COPIAR HASTA AQUÍ ▲▲▲ -->
 </body>

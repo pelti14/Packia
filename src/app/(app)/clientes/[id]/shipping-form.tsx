@@ -5,6 +5,7 @@ import { Truck } from "lucide-react";
 import { updateClientShipping, type FormState } from "@/app/actions";
 import { SubmitButton } from "@/components/submit-button";
 import { Notice } from "@/components/ui";
+import { BrandName } from "@/components/brand";
 
 type Option = { value: string; label: string; group: string };
 
@@ -45,7 +46,7 @@ export function ShippingForm({ clientId, options, current, ownSendcloud, error }
           {ownSendcloud && <span className="rounded-full bg-mint-50 px-2.5 py-1 text-xs font-semibold text-mint-600 ring-1 ring-mint-500/25">Conectada</span>}
         </div>
         <p className="mt-1 text-xs text-ink-500">
-          Opcional. Si el cliente tiene sus propios contratos con GLS, MRW, SEUR… los conecta en su Sendcloud y aquí pegas sus claves. Las etiquetas saldrán con sus tarifas. Si lo dejas vacío, se usa el Sendcloud de Packia.
+          Opcional. Si el cliente tiene sus propios contratos con GLS, MRW, SEUR… los conecta en su Sendcloud y aquí pegas sus claves. Las etiquetas saldrán con sus tarifas. Si lo dejas vacío, se usa el Sendcloud de <BrandName />.
         </p>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <input name="sendcloudPublicKey" className="input mono" placeholder={ownSendcloud ? "•••• (en blanco = sin cambios)" : "Clave pública"} autoComplete="off" aria-label="Clave pública de Sendcloud del cliente" />

@@ -6,6 +6,7 @@ import { deleteUser } from "@/app/actions";
 import { formatDateOnly } from "@/lib/format";
 import { Card, CardHeader, PageHeader, Pill } from "@/components/ui";
 import { UserForm } from "./user-form";
+import { BrandName } from "@/components/brand";
 
 const TONE = { ADMIN: "brand", STAFF: "aqua", CLIENT: "ink" } as const;
 
@@ -21,7 +22,7 @@ export default async function UsersPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Negocio" title="Usuarios" description="Quién entra en Packia. Las cuentas se guardan en Supabase Auth; aquí se asigna el rol y, a los clientes, su empresa." />
+      <PageHeader eyebrow="Negocio" title="Usuarios" description={<>Quién entra en <BrandName />. Las cuentas se guardan en Supabase Auth; aquí se asigna el rol y, a los clientes, su empresa.</>} />
       <div className="grid items-start gap-6 xl:grid-cols-3">
         <Card className="overflow-hidden xl:col-span-2">
           <table className="w-full">

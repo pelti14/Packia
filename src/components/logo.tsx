@@ -1,6 +1,15 @@
-import { clsx } from "clsx";
+"use client";
 
+import { clsx } from "clsx";
+import { useBrand } from "@/components/brand";
+
+/** Icono de la marca: el logo subido en Ajustes o el de serie. */
 export function LogoMark({ className }: { className?: string }) {
+  const brand = useBrand();
+  if (brand.logo) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={brand.logo} alt={brand.name} className={clsx("h-9 w-9 shrink-0 rounded-[11px] object-contain", className)} />;
+  }
   return (
     <svg viewBox="0 0 40 40" className={clsx("h-9 w-9", className)} aria-hidden>
       <defs>
@@ -18,15 +27,27 @@ export function LogoMark({ className }: { className?: string }) {
   );
 }
 
+/** Nombre con estilo: las 2 últimas letras con degradado, como «pack·ia». */
+export function BrandWordmark({ className, plain }: { className?: string; plain?: boolean }) {
+  const { name } = useBrand();
+  const lower = name === "Packia" ? "packia" : name;
+  const cut = lower.length > 4 && !lower.includes(" ") ? lower.length - 2 : lower.length;
+  return (
+    <span className={className}>
+      {lower.slice(0, cut)}
+      {cut < lower.length && <span className={plain ? undefined : "text-gradient"}>{lower.slice(cut)}</span>}
+    </span>
+  );
+}
+
 export function Logo() {
+  const brand = useBrand();
   return (
     <div className="flex items-center gap-2.5">
       <LogoMark />
-      <div className="leading-none">
-        <div className="font-display text-xl font-bold tracking-tight text-ink-900">
-          pack<span className="text-gradient">ia</span>
-        </div>
-        <div className="mt-1 text-[10px] font-medium uppercase tracking-[0.2em] text-ink-400">fulfillment</div>
+      <div className="min-w-0 leading-none">
+        <BrandWordmark className="block truncate font-display text-xl font-bold tracking-tight text-ink-900" />
+        <div className="mt-1 truncate text-[10px] font-medium uppercase tracking-[0.2em] text-ink-400">{brand.tagline}</div>
       </div>
     </div>
   );

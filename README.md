@@ -23,7 +23,7 @@ Documentación de negocio en [`docs/`](docs/): [cliente ideal](docs/cliente-idea
 | **Sincronización** | Además de los webhooks, Packia consulta todas las tiendas **cada minuto** (productos cada 30 min). Respaldo opcional con cron externo en `/api/cron/sync?key=CRON_SECRET`. |
 | **Tiendas** | Conexión con Shopify y WooCommerce, sincronización y webhooks. |
 | **Usuarios** | Alta y edición de usuarios: nombre, email, rol, empresa y contraseña. |
-| **Ajustes** | **Planes y precios** editables (opcionalmente aplicados a los clientes actuales desde hoy o desde el mes que viene; la web de GoHighLevel los lee de `/api/public/planes`). Datos fiscales, remitente de las etiquetas, claves de Sendcloud y estado del sistema (incluido el botón para actualizar la base de datos). |
+| **Ajustes** | **Marca**: nombre comercial, texto bajo el nombre y logo, para toda la app, el acceso de los clientes, el título de la pestaña y la web de GoHighLevel. **Planes y precios** editables (opcionalmente aplicados a los clientes actuales desde hoy o desde el mes que viene; la web de GoHighLevel los lee de `/api/public/planes`). Datos fiscales, remitente de las etiquetas, claves de Sendcloud y estado del sistema (incluido el botón para actualizar la base de datos). |
 
 ### Roles
 

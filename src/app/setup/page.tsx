@@ -8,6 +8,7 @@ import { StatusList } from "@/components/status-list";
 import { adminExists, missingEnv, systemStatus } from "@/lib/setup";
 import { getCurrentUser } from "@/lib/auth";
 import { AdminForm, CopyValue, MigrateForm } from "./forms";
+import { BrandName } from "@/components/brand";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +50,7 @@ export default async function SetupPage() {
         <div className="flex min-h-screen items-center justify-center px-4">
           <Card className="max-w-md space-y-4 p-8">
             <Logo />
-            <p className="text-sm text-ink-700">Packia ya tiene administrador. Inicia sesión como administrador para revisar la configuración.</p>
+            <p className="text-sm text-ink-700"><BrandName /> ya tiene administrador. Inicia sesión como administrador para revisar la configuración.</p>
             <Link href="/login?next=/ajustes" className="btn-primary">Iniciar sesión <ArrowRight className="h-4 w-4" /></Link>
           </Card>
         </div>
@@ -72,13 +73,13 @@ export default async function SetupPage() {
         <Logo />
         <div>
           <div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Configuración inicial</div>
-          <h1 className="mt-2 text-3xl font-bold sm:text-4xl">Pon Packia en marcha</h1>
+          <h1 className="mt-2 text-3xl font-bold sm:text-4xl">Pon <BrandName /> en marcha</h1>
           <p className="mt-2 text-sm text-ink-500">Cuatro pasos. Esta página solo está disponible hasta que exista el primer administrador.</p>
         </div>
 
         {adminOk ? (
           <Card className="p-6">
-            <Notice tone="success">Todo listo. Packia ya está configurado.</Notice>
+            <Notice tone="success">Todo listo. <BrandName /> ya está configurado.</Notice>
             <Link href="/login" className="btn-primary mt-4">Ir al login <ArrowRight className="h-4 w-4" /></Link>
           </Card>
         ) : (
@@ -123,7 +124,7 @@ export default async function SetupPage() {
 
             <Step n={3} title="Crear las tablas" done={tablesOk} active={connOk && !tablesOk}>
               <p className="mb-4 text-sm text-ink-700">
-                Crea todas las tablas de Packia en tu base de datos de Supabase y activa la seguridad (RLS) para que nadie pueda leerlas desde fuera.
+                Crea todas las tablas de la app en tu base de datos de Supabase y activa la seguridad (RLS) para que nadie pueda leerlas desde fuera.
               </p>
               <MigrateForm />
               <p className="mt-3 text-xs text-ink-500">Alternativa: pega el archivo <span className="mono">supabase/setup.sql</span> en Supabase → SQL Editor → Run.</p>

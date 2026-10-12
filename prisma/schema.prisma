@@ -293,6 +293,12 @@ model AppSettings {
   sendcloudSecretKey String?
   /// Emitir solo las facturas del mes anterior los días 1-5 de cada mes.
   autoInvoice        Boolean  @default(true)
+  /// Marca comercial que se ve en toda la app y en la web (por defecto «Packia»).
+  brandName          String?
+  /// Texto bajo el nombre (por defecto «fulfillment»).
+  brandTagline       String?
+  /// Logo como data URL (png, jpg, webp o svg; máx. 300 KB).
+  brandLogo          String?
   updatedAt          DateTime @updatedAt
 }
 

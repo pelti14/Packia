@@ -36,7 +36,7 @@
 </div></section>
 
 <section class="band"><div class="wrap">
-  <div class="center"><span class="eyebrow">Por qué Packia</span><h2 style="margin-top:14px">Logística cercana, con tecnología propia</h2></div>
+  <div class="center"><span class="eyebrow">Por qué <span data-pk="brand.name">Packia</span></span><h2 style="margin-top:14px">Logística cercana, con tecnología propia</h2></div>
   <div class="cards">
     <div class="card"><div class="ico">🎯</div><h3>Cero errores como objetivo</h3><p>Cada producto se valida al llegar y se escanea al preparar. Si algo no cuadra, no sale.</p></div>
     <div class="card"><div class="ico">💶</div><h3>Cuota fija</h3><p>Sabes lo que pagas cada mes. Sin cobros por movimiento ni sorpresas.</p></div>
@@ -58,7 +58,7 @@
   <div class="final">
     <span class="eyebrow">Plazas limitadas</span>
     <h2 style="margin-top:14px">Pide tu propuesta en 1 minuto</h2>
-    <p class="lead">Cuéntanos sobre tu tienda y te decimos cuánto te costaría con Packia. Sin compromiso.</p>
+    <p class="lead">Cuéntanos sobre tu tienda y te decimos cuánto te costaría con <span data-pk="brand.name">Packia</span>. Sin compromiso.</p>
     <div class="scarcity">⚡ Aceptamos pocas tiendas nuevas cada mes para garantizar el servicio</div>
     {{FORM}}
   </div>
@@ -66,7 +66,7 @@
 
 <section style="padding-top:0"><div class="wrap">
   <div class="faq">
-    <details><summary>¿Tengo que cambiar algo de mi tienda?</summary><p>No. Conectamos Packia a tu Shopify o WooCommerce y los pedidos nos llegan solos. El seguimiento vuelve a tu tienda.</p></details>
+    <details><summary>¿Tengo que cambiar algo de mi tienda?</summary><p>No. Conectamos <span data-pk="brand.name">Packia</span> a tu Shopify o WooCommerce y los pedidos nos llegan solos. El seguimiento vuelve a tu tienda.</p></details>
     <details><summary>Hago menos de 300 pedidos, ¿puedo entrar?</summary><p>Nuestro servicio está pensado a partir de unos 300 pedidos al mes. Si estás cerca, déjanos tus datos igualmente y lo valoramos.</p></details>
     <details><summary>¿Hay permanencia?</summary><p>No. Pagas mes a mes y empiezas con 2 semanas de prueba.</p></details>
     <details><summary>¿Cómo sé que mis pedidos salen bien?</summary><p>Tienes tu propio panel con cada pedido, su estado y su seguimiento en tiempo real, además de tu stock y tus facturas.</p></details>
@@ -75,24 +75,35 @@
 
 <footer><div class="wrap">
   {{LOGO}}
-  <span>© Packia · Logística para tiendas online · <a href="mailto:{{EMAIL}}">{{EMAIL}}</a></span>
+  <span>© <span data-pk="brand.name">Packia</span> · Logística para tiendas online · <a href="mailto:{{EMAIL}}">{{EMAIL}}</a></span>
 </div></footer>
 <div class="mcta"><a href="#formulario" class="btn btn-p">Pedir propuesta</a><a href="https://wa.me/{{WHATSAPP}}?text={{WA_TEXT}}" class="btn btn-w">WhatsApp</a></div>
 </div>
 <script>
-/* Precios en directo desde Packia (Ajustes → Planes y precios). Si no responde, se quedan los de arriba. */
+/* Marca y precios en directo desde tu app (Ajustes → Marca / Planes y precios).
+   Si no responde, se queda lo escrito arriba. */
 (function(){
-  var URL_PACKIA="{{PACKIA_URL}}";
-  if(!URL_PACKIA||URL_PACKIA.indexOf("{{")===0)return;
+  var URL_APP="{{PACKIA_URL}}";
+  if(!URL_APP||URL_APP.indexOf("{{")===0)return;
   var fmt=function(n,dec){return n.toLocaleString("es-ES",{minimumFractionDigits:dec,maximumFractionDigits:dec})};
-  fetch(URL_PACKIA.replace(/\/+$/,"")+"/api/public/planes").then(function(r){return r.json()}).then(function(d){
+  var all=function(sel,fn){document.querySelectorAll(sel).forEach(fn)};
+  fetch(URL_APP.replace(/\/+$/,"")+"/api/public/planes").then(function(r){return r.json()}).then(function(d){
+    var b=d.brand;
+    if(b&&b.name){
+      all('[data-pk="brand.name"]',function(el){el.textContent=b.name});
+      all('[data-pk="brand.tagline"]',function(el){el.textContent=b.tagline||""});
+      if(b.name!=="Packia")all('[data-pk-wordmark]',function(el){el.textContent=b.name});
+      if(b.logo)all('[data-pk-logo]',function(el){var i=document.createElement("img");i.src=b.logo;i.alt=b.name;i.width=38;i.height=38;i.style.borderRadius="11px";i.style.objectFit="contain";el.replaceWith(i)});
+      document.title=document.title.replace(/Packia/g,b.name);
+      all('a[href*="wa.me"]',function(a){a.href=a.href.replace(/Packia/g,encodeURIComponent(b.name))});
+    }
     var min=null;
     (d.plans||[]).forEach(function(p){
       min=min===null?p.fee:Math.min(min,p.fee);
-      var set=function(field,val){document.querySelectorAll('[data-pk="'+p.key+'.'+field+'"]').forEach(function(el){el.textContent=val})};
+      var set=function(field,val){all('[data-pk="'+p.key+'.'+field+'"]',function(el){el.textContent=val})};
       set("label",p.label);set("fee",fmt(p.fee,p.fee%1?2:0));set("orders",fmt(p.orders,0));set("extra",fmt(p.extra,2));
     });
-    if(min!==null)document.querySelectorAll('[data-pk="min.fee"]').forEach(function(el){el.textContent=fmt(min,min%1?2:0)});
+    if(min!==null)all('[data-pk="min.fee"]',function(el){el.textContent=fmt(min,min%1?2:0)});
   }).catch(function(){});
 })();
 </script>

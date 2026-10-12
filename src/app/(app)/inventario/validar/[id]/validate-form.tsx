@@ -5,6 +5,7 @@ import { BadgeCheck, ScanBarcode } from "lucide-react";
 import { validateProduct, type FormState } from "@/app/actions";
 import { SubmitButton } from "@/components/submit-button";
 import { Notice } from "@/components/ui";
+import { BrandName } from "@/components/brand";
 
 type Initial = { name: string; barcode: string; location: string; weightGrams: string };
 
@@ -19,7 +20,7 @@ export function ValidateForm({ productId, next, initial }: { productId: string; 
           <ScanBarcode className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-500" />
           <input id="barcode" name="barcode" defaultValue={v.barcode} autoFocus className="input mono py-3 pl-11 text-base" placeholder="Escanéalo con el lector o escríbelo" autoComplete="off" />
         </div>
-        <p className="mt-1.5 text-xs text-ink-400">Con el código guardado, en el picking se puede escanear el producto y Packia avisa si no es el del pedido.</p>
+        <p className="mt-1.5 text-xs text-ink-400">Con el código guardado, en el picking se puede escanear el producto y <BrandName /> avisa si no es el del pedido.</p>
       </div>
       <div>
         <label className="label" htmlFor="name">Nombre (como aparece en la etiqueta del producto)</label>

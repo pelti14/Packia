@@ -19,14 +19,14 @@ export const getSettings = cache(async (): Promise<Settings> => {
   const pick = (v: string | null | undefined, envKey: string, fallback = "") => v || env(envKey) || fallback;
   return {
     company: {
-      name: pick(s?.companyName, "COMPANY_NAME", "Packia Fulfillment"),
+      name: pick(s?.companyName, "COMPANY_NAME", s?.brandName || "Packia Fulfillment"),
       taxId: pick(s?.companyTaxId, "COMPANY_TAX_ID"),
       address: pick(s?.companyAddress, "COMPANY_ADDRESS"),
       email: pick(s?.companyEmail, "COMPANY_EMAIL"),
       iban: pick(s?.companyIban, "COMPANY_IBAN"),
     },
     sender: {
-      name: pick(s?.senderName, "SENDER_NAME", "Packia Fulfillment"),
+      name: pick(s?.senderName, "SENDER_NAME", s?.brandName || "Packia Fulfillment"),
       address: pick(s?.senderAddress, "SENDER_ADDRESS"),
       city: pick(s?.senderCity, "SENDER_CITY"),
       zip: pick(s?.senderZip, "SENDER_ZIP"),

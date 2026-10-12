@@ -34,7 +34,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </form>
           <div className="flex items-center gap-3">
             {user.role !== "CLIENT" && (
-              <Link href="/demo" className="glass flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-brand-600 hover:text-brand-700" title="Modo demo para enseñar Packia a un cliente">
+              <Link href="/demo" className="glass flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-brand-600 hover:text-brand-700" title="Modo demo para enseñar la app a un cliente">
                 <Presentation className="h-4 w-4" /> <span className="hidden md:inline">Demo</span>
               </Link>
             )}

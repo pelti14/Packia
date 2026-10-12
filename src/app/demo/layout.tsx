@@ -3,7 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { Logo } from "@/components/logo";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Demo · Packia" };
+export const metadata = { title: "Demo" };
 
 /** Modo demo: solo administradores y equipo. Todo es ficticio y no toca la base de datos. */
 export default async function DemoLayout({ children }: { children: React.ReactNode }) {

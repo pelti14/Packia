@@ -14,18 +14,18 @@ const SCOPES = "read_orders, read_products, read_merchant_managed_fulfillment_or
 
 const GUIDE: Record<Guide, string[]> = {
   SHOPIFY_DEV: [
-    "Lo hace el dueño de la tienda en SU admin de Shopify: Configuración → Apps → Desarrollar apps → «Build apps in Dev Dashboard» → Create app → nombre «Packia».",
+    "Lo hace el dueño de la tienda en SU admin de Shopify: Configuración → Apps → Desarrollar apps → «Build apps in Dev Dashboard» → Create app → el nombre de tu empresa.",
     "En la versión de la app: deja la App URL por defecto y en Access → Scopes pon: " + SCOPES + ". Pulsa Release.",
     "En la app → Installs → Install app → elige su tienda → Install.",
     "En la app → Settings: copia el Client ID y el Client secret.",
     "Dominio: Shopify → Configuración → Dominios → el que termina en .myshopify.com. Pega aquí los 3 datos.",
-    "Packia crea solo los webhooks de pedidos. Si los pedidos llegan sin dirección, activa «Protected customer data» en la app.",
+    "La app crea sola los webhooks de pedidos. Si los pedidos llegan sin dirección, activa «Protected customer data» en la app.",
   ],
   SHOPIFY_LEGACY: [
     "Solo para apps creadas en el admin ANTES de 2026 (Configuración → Apps → Desarrollar apps → tu app).",
     "En «Credenciales de la API» copia el token de acceso de la Admin API (shpat_…) y la clave secreta de la API.",
     "Permisos necesarios: " + SCOPES + ".",
-    "Pega aquí el dominio .myshopify.com, el token y la clave secreta. Packia crea solo los webhooks.",
+    "Pega aquí el dominio .myshopify.com, el token y la clave secreta. La app crea sola los webhooks.",
   ],
   WOOCOMMERCE: [
     "En WordPress: WooCommerce → Ajustes → Avanzado → REST API → Añadir clave.",

@@ -6,6 +6,7 @@ import { requestPasswordReset, signIn } from "@/app/auth-actions";
 import type { FormState } from "@/app/actions";
 import { SubmitButton } from "@/components/submit-button";
 import { Notice } from "@/components/ui";
+import { BrandName } from "@/components/brand";
 
 export function LoginForm({ next, error }: { next?: string; error?: string }) {
   const [mode, setMode] = useState<"login" | "reset">("login");
@@ -35,7 +36,7 @@ export function LoginForm({ next, error }: { next?: string; error?: string }) {
       <input type="hidden" name="next" value={next ?? ""} />
       <div>
         <h2 className="text-2xl font-bold text-ink-900">Inicia sesión</h2>
-        <p className="mt-1 text-sm text-ink-500">Accede al panel de Packia.</p>
+        <p className="mt-1 text-sm text-ink-500">Accede al panel de <BrandName />.</p>
       </div>
       <Field icon={Mail} id="email" name="email" type="email" label="Email" placeholder="tu@empresa.com" defaultValue={state?.values?.email} />
       <Field icon={KeyRound} id="password" name="password" type="password" label="Contraseña" placeholder="••••••••" />

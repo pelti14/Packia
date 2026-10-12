@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, Clock3, PackageCheck, PackagePlus, Send, Siren, Target } from "lucide-react";
 import { db } from "@/lib/db";
+import { getBrand } from "@/lib/brand";
 import { monthlyIncluded } from "@/lib/plans";
 import { clientScope, isStaff, requireUser } from "@/lib/auth";
 import { formatDateOnly, formatDay, timeAgo, units } from "@/lib/format";
@@ -10,6 +11,7 @@ import { Card, CardHeader, EmptyState, Notice, PageHeader, PlatformBadge, StatCa
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
   const user = await requireUser();
+  const brand = await getBrand();
   const scope = clientScope(user);
   const today = startOfDay();
   const since14 = addDays(today, -13);
@@ -58,7 +60,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         description={
           isStaff(user)
             ? "Todo lo que entra antes de las 14:00 en día laborable sale hoy. Lo que entra después, el siguiente día laborable."
-            : "Estado en tiempo real de tus pedidos, tu stock y tus recepciones en el almacén de Packia."
+            : `Estado en tiempo real de tus pedidos, tu stock y tus recepciones en el almacén de ${brand.name}.`
         }
         actions={
           <Link href="/salida" className="btn-primary">
