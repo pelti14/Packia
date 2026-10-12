@@ -106,15 +106,18 @@ Cuando existe el administrador, `/setup` queda bloqueado.
    - dirección del almacén (para las etiquetas),
    - claves de **Sendcloud** (botón *Probar conexión*).
 2. **Clientes**: crea cada cliente y ajusta su plan y sus tarifas.
-3. **Tiendas**: conecta su Shopify o WooCommerce y crea los webhooks con la URL que te muestra.
+3. **Tiendas**: conecta su Shopify o WooCommerce.
+   - **Shopify:** envía a tu cliente la guía [conectar-shopify.md](conectar-shopify.md). Te pasará el dominio `.myshopify.com`, el Client ID y el Client secret. Los webhooks se crean solos.
+   - **WooCommerce:** crea los webhooks con la URL y el secreto que te muestra la ficha de la tienda.
 4. **Usuarios**: da acceso a tu equipo (rol *Almacén*) y a tus clientes (rol *Cliente*).
 
 ---
 
 ## Actualizar Packia más adelante
-- **Con GitHub:** haz `git push` y Hostinger vuelve a desplegar.
-- **Con ZIP:** sube el ZIP nuevo y haz **Redeploy**.
-- Si la versión trae cambios de base de datos, en **Ajustes → Estado del sistema** aparece el botón **Actualizar base de datos**.
+1. Sube la versión nueva:
+   - **Con GitHub:** haz `git push` y Hostinger vuelve a desplegar.
+   - **Con ZIP:** en hPanel → tu Node.js Web App → sube el ZIP nuevo → **Redeploy**. Las variables de entorno se mantienen.
+2. Entra en Packia como administrador. Si la versión trae cambios de base de datos, verás **«Actualización pendiente»**. Pulsa **Actualizar ahora**. Tus datos se mantienen y la app se abre sola al terminar.
 
 ## Problemas frecuentes
 

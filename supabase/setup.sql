@@ -292,7 +292,7 @@ ALTER TABLE "Invoice" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "InvoiceLine" ENABLE ROW LEVEL SECURITY;
 
 INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
-VALUES ('76e58916-58fe-4d95-a507-ae38797a8947', '10d15a52a8e24001cceeb9c7539d6c5f52df5221dffbccf056d82955d32e23c4', now(), '20261012030730_init', 1);
+VALUES ('cc19e1da-f4ae-43a7-bc67-97a6df2dd3a7', '10d15a52a8e24001cceeb9c7539d6c5f52df5221dffbccf056d82955d32e23c4', now(), '20261012030730_init', 1);
 
 -- ════════ 20261012031806_app_settings ════════
 -- CreateTable
@@ -319,7 +319,17 @@ CREATE TABLE "AppSettings" (
 
 -- Seguridad en Supabase: sin acceso por la API pública.
 ALTER TABLE "AppSettings" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "_prisma_migrations" ENABLE ROW LEVEL SECURITY;
+-- (condicional: en la base "shadow" de prisma migrate dev esta tabla no existe)
+DO $$ BEGIN IF to_regclass('public._prisma_migrations') IS NOT NULL THEN ALTER TABLE "_prisma_migrations" ENABLE ROW LEVEL SECURITY; END IF; END $$;
 
 INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
-VALUES ('60d30314-59f7-44ab-bc16-c03cac76cb2f', 'e146c5c6160bfe4508704c090c96b9fc77c6f8a3d3216dca520ffe0141578a05', now(), '20261012031806_app_settings', 1);
+VALUES ('ce55edf2-f1ef-40c7-9415-027c8030c2ff', '43fa63b1c3f2360a1429f876f167cb5f74fc9d20c5e86ffa1d87a1a95fdb5aeb', now(), '20261012031806_app_settings', 1);
+
+-- ════════ 20261012120000_shopify_dev_dashboard ════════
+-- AlterTable: Shopify Dev Dashboard (client credentials)
+ALTER TABLE "Store" ADD COLUMN "shopifyClientId" TEXT,
+ADD COLUMN "shopifyClientSecret" TEXT,
+ADD COLUMN "tokenExpiresAt" TIMESTAMP(3);
+
+INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
+VALUES ('ac53a4b5-480e-4875-a281-876e7e0042d7', 'b7d797a87902cbcea16cc86b75ca38d851ba8463137949e9c1a78c80f99065d2', now(), '20261012120000_shopify_dev_dashboard', 1);

@@ -93,11 +93,14 @@ export async function adminExists() {
   return (await db.profile.count({ where: { role: "ADMIN" } })) > 0;
 }
 
-/** true si falta algo para poder usar la app (y por tanto /setup debe estar abierto). */
+/**
+ * true si la app aún no está instalada (faltan variables, tablas o administrador).
+ * Las actualizaciones de base de datos de una app ya instalada no cuentan: las aplica
+ * el administrador desde la pantalla de actualización, después de iniciar sesión.
+ */
 export async function needsSetup() {
   try {
     if (missingEnv().length) return true;
-    if ((await pendingMigrations()).length) return true;
     return !(await adminExists());
   } catch {
     return true;

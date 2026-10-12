@@ -7,7 +7,8 @@ import { db } from "@/lib/db";
 import { assertRole } from "@/lib/auth";
 import { encrypt } from "@/lib/crypto";
 import { createLabel, estimateWeight, type LabelRequest } from "@/lib/labels";
-import { shipOrder, syncStore, testStoreConnection } from "@/lib/sync";
+import { registerShopifyWebhooks, shipOrder, syncStore, testStoreConnection } from "@/lib/sync";
+import { getAppUrl } from "@/lib/app-url";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { CARRIERS, ORDER_FLOW, PLANS, RETURN_FEE_CENTS, type OrderStatus, type Plan } from "@/lib/types";
 
@@ -84,38 +85,69 @@ export async function updateClient(clientId: string, _: FormState, form: FormDat
 
 // ─── Tiendas ────────────────────────────────────────────────
 
+/**
+ * Normaliza lo que escribe el usuario a "tienda.myshopify.com".
+ * Acepta "tienda", "tienda.myshopify.com", "https://tienda.myshopify.com/..." o "admin.shopify.com/store/tienda".
+ */
+function shopifyDomain(input: string): { domain?: string; error?: string } {
+  const v = input.trim().toLowerCase();
+  if (v.includes("@")) return { error: "Has puesto un email. Aquí va el dominio interno de la tienda: tienda.myshopify.com (Shopify → Configuración → Dominios)." };
+  const admin = v.match(/admin\.shopify\.com\/store\/([a-z0-9-]+)/);
+  if (admin) return { domain: `${admin[1]}.myshopify.com` };
+  const host = v.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  if (/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(host)) return { domain: host };
+  if (/^[a-z0-9][a-z0-9-]*$/.test(host)) return { domain: `${host}.myshopify.com` };
+  return { error: "Usa el dominio interno que termina en .myshopify.com (Shopify → Configuración → Dominios), no tu dominio propio." };
+}
+
 export async function connectStore(_: FormState, form: FormData): Promise<FormState> {
   await assertRole(["ADMIN"]);
   const platform = str(form.get("platform"));
   const clientId = str(form.get("clientId"));
   const name = str(form.get("name"));
+  const shopifyMode = str(form.get("shopifyMode")) === "legacy" ? "legacy" : "dev";
   let domain = str(form.get("domain")).toLowerCase();
-  const values = keep(form, ["platform", "clientId", "name", "domain", "consumerKey"]);
+  const values = keep(form, ["platform", "clientId", "name", "domain", "consumerKey", "shopifyMode", "shopifyClientId"]);
 
   if (!clientId) return { error: "Elige un cliente", values };
   if (!name || !domain) return { error: "Nombre y dominio son obligatorios", values };
 
+  const secrets = {
+    accessToken: null as string | null,
+    consumerKey: null as string | null,
+    consumerSecret: null as string | null,
+    shopifyClientId: null as string | null,
+    shopifyClientSecret: null as string | null,
+    webhookSecret: null as string | null,
+  };
+
   if (platform === "SHOPIFY") {
-    domain = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
-    if (!domain.endsWith(".myshopify.com")) return { error: "Usa el dominio interno: mitienda.myshopify.com", values };
-    if (!str(form.get("accessToken"))) return { error: "Falta el token de acceso de la Admin API", values };
+    const d = shopifyDomain(domain);
+    if (d.error) return { error: d.error, values };
+    domain = d.domain!;
+    if (shopifyMode === "dev") {
+      secrets.shopifyClientId = str(form.get("shopifyClientId"));
+      secrets.shopifyClientSecret = str(form.get("shopifyClientSecret"));
+      if (!secrets.shopifyClientId || !secrets.shopifyClientSecret) return { error: "Faltan el Client ID y el Client secret de la app", values };
+      secrets.webhookSecret = secrets.shopifyClientSecret;
+    } else {
+      secrets.accessToken = str(form.get("accessToken"));
+      secrets.webhookSecret = str(form.get("apiSecret")) || null;
+      if (!secrets.accessToken) return { error: "Falta el token de acceso (shpat_…)", values };
+    }
   } else if (platform === "WOOCOMMERCE") {
     if (!domain.startsWith("http")) domain = `https://${domain}`;
     domain = domain.replace(/\/+$/, "");
-    if (!str(form.get("consumerKey")) || !str(form.get("consumerSecret"))) return { error: "Faltan las claves de la REST API", values };
+    secrets.consumerKey = str(form.get("consumerKey"));
+    secrets.consumerSecret = str(form.get("consumerSecret"));
+    if (!secrets.consumerKey || !secrets.consumerSecret) return { error: "Faltan las claves de la REST API", values };
+    secrets.webhookSecret = crypto.randomBytes(24).toString("hex");
   } else {
     return { error: "Plataforma no válida", values };
   }
 
-  const plain = {
-    platform,
-    domain,
-    accessToken: str(form.get("accessToken")) || null,
-    consumerKey: str(form.get("consumerKey")) || null,
-    consumerSecret: str(form.get("consumerSecret")) || null,
-  };
   try {
-    await testStoreConnection(plain);
+    await testStoreConnection({ platform, domain, ...secrets, tokenExpiresAt: null });
   } catch (err) {
     return { error: `No hemos podido conectar: ${message(err)}`, values };
   }
@@ -123,18 +155,18 @@ export async function connectStore(_: FormState, form: FormData): Promise<FormSt
   const exists = await db.store.findUnique({ where: { platform_domain: { platform, domain } } });
   if (exists) return { error: "Esa tienda ya está conectada", values };
 
-  // Shopify: la clave de firma de webhooks. WooCommerce: la generamos nosotros.
-  const webhookSecret = str(form.get("webhookSecret")) || (platform === "WOOCOMMERCE" ? crypto.randomBytes(24).toString("hex") : null);
   const store = await db.store.create({
     data: {
       clientId,
       platform,
       name,
       domain,
-      accessToken: encrypt(plain.accessToken),
-      consumerKey: encrypt(plain.consumerKey),
-      consumerSecret: encrypt(plain.consumerSecret),
-      webhookSecret: encrypt(webhookSecret),
+      accessToken: encrypt(secrets.accessToken),
+      consumerKey: encrypt(secrets.consumerKey),
+      consumerSecret: encrypt(secrets.consumerSecret),
+      shopifyClientId: encrypt(secrets.shopifyClientId),
+      shopifyClientSecret: encrypt(secrets.shopifyClientSecret),
+      webhookSecret: encrypt(secrets.webhookSecret),
     },
   });
   try {
@@ -142,8 +174,27 @@ export async function connectStore(_: FormState, form: FormData): Promise<FormSt
   } catch {
     // El error queda guardado en la tienda y se muestra en su ficha.
   }
+  if (platform === "SHOPIFY") {
+    try {
+      await registerShopifyWebhooks(store.id, await getAppUrl());
+    } catch (err) {
+      await db.store.update({ where: { id: store.id }, data: { lastSyncError: `No se pudieron crear los webhooks: ${message(err)}` } });
+    }
+  }
   revalidatePath("/", "layout");
   redirect(`/tiendas/${store.id}`);
+}
+
+export async function registerWebhooksAction(storeId: string): Promise<FormState> {
+  await assertRole(["ADMIN"]);
+  try {
+    const created = await registerShopifyWebhooks(storeId, await getAppUrl());
+    await db.store.update({ where: { id: storeId }, data: { lastSyncError: null } });
+    revalidatePath(`/tiendas/${storeId}`);
+    return { success: created.length ? `Webhooks creados: ${created.join(", ")}` : "Los webhooks ya estaban creados" };
+  } catch (err) {
+    return { error: message(err) };
+  }
 }
 
 export async function syncStoreAction(storeId: string): Promise<FormState> {

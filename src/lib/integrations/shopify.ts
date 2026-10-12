@@ -5,8 +5,17 @@ type ShopifyCreds = { domain: string; accessToken: string };
 
 const API_VERSION = process.env.SHOPIFY_API_VERSION ?? "2025-07";
 
+/** fetch con un mensaje entendible si la tienda no existe o no responde. */
+async function shopFetch(domain: string, url: string, init: RequestInit) {
+  try {
+    return await fetch(url, init);
+  } catch {
+    throw new Error(`No se encuentra la tienda ${domain}. Revisa el dominio .myshopify.com (Shopify → Configuración → Dominios).`);
+  }
+}
+
 async function gql<T>(creds: ShopifyCreds, query: string, variables?: Record<string, unknown>): Promise<T> {
-  const res = await fetch(`https://${creds.domain}/admin/api/${API_VERSION}/graphql.json`, {
+  const res = await shopFetch(creds.domain, `https://${creds.domain}/admin/api/${API_VERSION}/graphql.json`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -45,6 +54,55 @@ function toAddress(a: GqlAddress) {
     countryCode: a?.countryCodeV2 ?? undefined,
     phone: a?.phone ?? undefined,
   };
+}
+
+/**
+ * Apps del Dev Dashboard (2026+): no hay token fijo. Se pide uno con
+ * Client ID + Client secret (client credentials grant) y dura 24 h.
+ * Solo funciona si la app está instalada en la tienda y ambas son de la misma organización
+ * (el comerciante crea la app desde su propio admin).
+ */
+export async function clientCredentialsToken(domain: string, clientId: string, clientSecret: string) {
+  const res = await shopFetch(domain, `https://${domain}/admin/oauth/access_token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
+    body: new URLSearchParams({ grant_type: "client_credentials", client_id: clientId, client_secret: clientSecret }).toString(),
+    cache: "no-store",
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    if (/shop_not_permitted/.test(text)) throw new Error("Shopify no permite el acceso: la app debe crearla el dueño de la tienda desde su propio admin e instalarla en esa tienda");
+    if (/application_cannot_be_found|invalid_client/.test(text)) throw new Error("Client ID o Client secret incorrectos, o la app no está instalada en la tienda");
+    throw new Error(`Shopify respondió ${res.status} al pedir el token: ${text.slice(0, 200)}`);
+  }
+  const data = JSON.parse(text) as { access_token: string; expires_in?: number };
+  return { accessToken: data.access_token, expiresAt: new Date(Date.now() + (data.expires_in ?? 86399) * 1000) };
+}
+
+const WEBHOOK_TOPICS = ["ORDERS_CREATE", "ORDERS_CANCELLED"] as const;
+
+/** Da de alta los webhooks de pedidos apuntando a Packia. Ignora los que ya existen. */
+export async function registerWebhooks(creds: ShopifyCreds, callbackUrl: string) {
+  const existing = await gql<{ webhookSubscriptions: { nodes: { topic: string; endpoint: { __typename: string; callbackUrl?: string } }[] } }>(
+    creds,
+    `{ webhookSubscriptions(first: 50) { nodes { topic endpoint { __typename ... on WebhookHttpEndpoint { callbackUrl } } } } }`,
+  );
+  const has = (topic: string) => existing.webhookSubscriptions.nodes.some((n) => n.topic === topic && n.endpoint.callbackUrl === callbackUrl);
+  const created: string[] = [];
+  for (const topic of WEBHOOK_TOPICS) {
+    if (has(topic)) continue;
+    const r = await gql<{ webhookSubscriptionCreate: { userErrors: { message: string }[] } }>(
+      creds,
+      `mutation Create($topic: WebhookSubscriptionTopic!, $sub: WebhookSubscriptionInput!) {
+        webhookSubscriptionCreate(topic: $topic, webhookSubscription: $sub) { webhookSubscription { id } userErrors { message } }
+      }`,
+      { topic, sub: { callbackUrl, format: "JSON" } },
+    );
+    const errors = r.webhookSubscriptionCreate.userErrors.filter((e) => !/already been taken/i.test(e.message));
+    if (errors.length) throw new Error(`Webhook ${topic}: ${errors.map((e) => e.message).join("; ")}`);
+    created.push(topic);
+  }
+  return created;
 }
 
 export async function testConnection(creds: ShopifyCreds): Promise<string> {

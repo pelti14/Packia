@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   const topic = req.headers.get("x-shopify-topic") ?? "";
 
   const store = domain ? await db.store.findFirst({ where: { platform: "SHOPIFY", domain } }) : null;
-  const secret = decrypt(store?.webhookSecret);
+  const secret = decrypt(store?.webhookSecret) ?? decrypt(store?.shopifyClientSecret);
   if (!store || !secret) return NextResponse.json({ error: "Tienda desconocida" }, { status: 404 });
 
   if (!verifyWebhook(rawBody, req.headers.get("x-shopify-hmac-sha256"), secret)) {

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
+import { getAppUrl } from "@/lib/app-url";
 import { Webhook } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
@@ -9,12 +9,8 @@ import { formatDate } from "@/lib/format";
 import { BackLink, Card, CardHeader, Notice, PageHeader, PlatformBadge, StatusBadge } from "@/components/ui";
 import { SyncButton } from "../sync-button";
 import { CopyField } from "./copy-field";
+import { WebhooksButton } from "./webhooks-button";
 
-async function appUrl() {
-  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL.replace(/\/+$/, "");
-  const h = await headers();
-  return `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
-}
 
 export default async function StorePage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser(["ADMIN", "STAFF"]);
@@ -25,7 +21,7 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
   });
   if (!store) notFound();
 
-  const base = await appUrl();
+  const base = await getAppUrl();
   const shopify = store.platform === "SHOPIFY";
   const webhookUrl = `${base}/api/webhooks/${shopify ? "shopify" : "woocommerce"}`;
 
@@ -41,11 +37,16 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <PlatformBadge platform={store.platform} size="md" />
+        {shopify && !store.isDemo && (
+          <span className="rounded-lg bg-line/60 px-2 py-0.5 text-[11px] font-semibold text-ink-500">
+            {store.shopifyClientId ? "App Dev Dashboard" : "App antigua"}
+          </span>
+        )}
         <span className="text-sm text-ink-500">{store._count.products} referencias · {store._count.orders} pedidos</span>
         {store.lastSyncAt && <span className="text-sm text-ink-400">· Última sincronización {formatDate(store.lastSyncAt)}</span>}
       </div>
 
-      {store.lastSyncError && <div className="mb-6"><Notice tone="error">Último error de sincronización: {store.lastSyncError}</Notice></div>}
+      {store.lastSyncError && <div className="mb-6"><Notice tone="error">Último error: {store.lastSyncError}</Notice></div>}
       {store.isDemo && <div className="mb-6"><Notice>Tienda de demostración: no se conecta a ninguna API real.</Notice></div>}
 
       <div className="grid gap-6 xl:grid-cols-5">
@@ -57,9 +58,9 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
             <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed text-ink-700 marker:font-semibold marker:text-brand-500">
               {shopify ? (
                 <>
-                  <li>En el admin de Shopify: Configuración → Notificaciones → Webhooks → Crear webhook.</li>
-                  <li>Crea los eventos <b>Creación de pedido</b>, <b>Pago de pedido</b> y <b>Cancelación de pedido</b> en formato JSON con la URL de arriba.</li>
-                  <li>Shopify firma cada envío con la clave que aparece en esa misma pantalla: es la que guardaste al conectar la tienda.</li>
+                  <li>Packia crea automáticamente en Shopify los webhooks de <b>pedido creado</b> y <b>pedido cancelado</b> al conectar la tienda.</li>
+                  <li>Si cambias de dominio o has borrado los webhooks, pulsa el botón de abajo para crearlos de nuevo.</li>
+                  <li>Cada aviso llega firmado con la clave secreta de la app y Packia lo verifica.</li>
                 </>
               ) : (
                 <>
@@ -69,6 +70,7 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
                 </>
               )}
             </ol>
+            {shopify && !store.isDemo && user.role === "ADMIN" && <WebhooksButton storeId={store.id} />}
           </div>
         </Card>
 

@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
+import { getAppUrl } from "@/lib/app-url";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import type { FormState } from "@/app/actions";
 
@@ -32,8 +32,7 @@ export async function signOut() {
 export async function requestPasswordReset(_: FormState, form: FormData): Promise<FormState> {
   const email = str(form.get("email")).toLowerCase();
   if (!email) return { error: "Introduce tu email" };
-  const h = await headers();
-  const origin = process.env.NEXT_PUBLIC_APP_URL ?? `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
+  const origin = await getAppUrl();
   const supabase = await createSupabaseServer();
   await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${origin}/auth/callback?next=/cambiar-clave` });
   // Misma respuesta exista o no la cuenta, para no revelar qué emails están registrados.

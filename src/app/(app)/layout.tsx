@@ -3,11 +3,16 @@ import { db } from "@/lib/db";
 import { clientScope, requireUser, ROLE_LABEL } from "@/lib/auth";
 import { MobileNav, Sidebar } from "@/components/sidebar";
 import { CutoffClock } from "@/components/cutoff-clock";
+import { pendingMigrations } from "@/lib/setup";
+import { UpdateScreen } from "@/components/update-screen";
 
 export const dynamic = "force-dynamic";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
+  // Nueva versión desplegada con cambios de base de datos aún sin aplicar.
+  const pending = await pendingMigrations().catch(() => []);
+  if (pending.length) return <UpdateScreen isAdmin={user.role === "ADMIN"} count={pending.length} />;
   const scope = clientScope(user);
   const [salida, recepcion, devoluciones] = await Promise.all([
     db.order.count({ where: { ...scope, status: { in: ["PENDING", "PICKING", "PACKED"] } } }),

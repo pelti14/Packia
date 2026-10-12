@@ -22,4 +22,5 @@ CREATE TABLE "AppSettings" (
 
 -- Seguridad en Supabase: sin acceso por la API pública.
 ALTER TABLE "AppSettings" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "_prisma_migrations" ENABLE ROW LEVEL SECURITY;
+-- (condicional: en la base "shadow" de prisma migrate dev esta tabla no existe)
+DO $$ BEGIN IF to_regclass('public._prisma_migrations') IS NOT NULL THEN ALTER TABLE "_prisma_migrations" ENABLE ROW LEVEL SECURITY; END IF; END $$;

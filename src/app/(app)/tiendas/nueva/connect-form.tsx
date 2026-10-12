@@ -8,13 +8,24 @@ import type { Platform } from "@/lib/types";
 import { SubmitButton } from "@/components/submit-button";
 import { Notice } from "@/components/ui";
 
-const GUIDE: Record<Platform, string[]> = {
-  SHOPIFY: [
-    "En el admin de Shopify: Configuración → Apps y canales de venta → Desarrollar apps → Crear una app.",
-    "Permisos de la Admin API: read_orders, read_products, read_merchant_managed_fulfillment_orders y write_merchant_managed_fulfillment_orders.",
-    "Instala la app y copia el token de acceso (shpat_…).",
-    "En Configuración → Notificaciones → Webhooks copia la clave de firma que muestra Shopify.",
-    "Pega aquí el dominio mitienda.myshopify.com, el token y la clave de firma.",
+type Guide = "SHOPIFY_DEV" | "SHOPIFY_LEGACY" | "WOOCOMMERCE";
+
+const SCOPES = "read_orders, read_products, read_merchant_managed_fulfillment_orders, write_merchant_managed_fulfillment_orders";
+
+const GUIDE: Record<Guide, string[]> = {
+  SHOPIFY_DEV: [
+    "Lo hace el dueño de la tienda en SU admin de Shopify: Configuración → Apps → Desarrollar apps → «Build apps in Dev Dashboard» → Create app → nombre «Packia».",
+    "En la versión de la app: deja la App URL por defecto y en Access → Scopes pon: " + SCOPES + ". Pulsa Release.",
+    "En la app → Installs → Install app → elige su tienda → Install.",
+    "En la app → Settings: copia el Client ID y el Client secret.",
+    "Dominio: Shopify → Configuración → Dominios → el que termina en .myshopify.com. Pega aquí los 3 datos.",
+    "Packia crea solo los webhooks de pedidos. Si los pedidos llegan sin dirección, activa «Protected customer data» en la app.",
+  ],
+  SHOPIFY_LEGACY: [
+    "Solo para apps creadas en el admin ANTES de 2026 (Configuración → Apps → Desarrollar apps → tu app).",
+    "En «Credenciales de la API» copia el token de acceso de la Admin API (shpat_…) y la clave secreta de la API.",
+    "Permisos necesarios: " + SCOPES + ".",
+    "Pega aquí el dominio .myshopify.com, el token y la clave secreta. Packia crea solo los webhooks.",
   ],
   WOOCOMMERCE: [
     "En WordPress: WooCommerce → Ajustes → Avanzado → REST API → Añadir clave.",
@@ -27,12 +38,15 @@ const GUIDE: Record<Platform, string[]> = {
 export function ConnectForm({ clients, defaultClient }: { clients: { id: string; name: string }[]; defaultClient?: string }) {
   const [state, action] = useActionState<FormState, FormData>(connectStore, undefined);
   const [platform, setPlatform] = useState<Platform>("SHOPIFY");
+  const [shopifyMode, setShopifyMode] = useState<"dev" | "legacy">("dev");
   const v = state?.values ?? {};
+  const guide: Guide = platform === "WOOCOMMERCE" ? "WOOCOMMERCE" : shopifyMode === "dev" ? "SHOPIFY_DEV" : "SHOPIFY_LEGACY";
 
   return (
     <div className="grid gap-6 xl:grid-cols-5">
       <form action={action} className="glass space-y-5 p-6 xl:col-span-3">
         <input type="hidden" name="platform" value={platform} />
+        <input type="hidden" name="shopifyMode" value={shopifyMode} />
 
         <div>
           <span className="label">Plataforma</span>
@@ -70,20 +84,49 @@ export function ConnectForm({ clients, defaultClient }: { clients: { id: string;
         </div>
 
         <div>
-          <label className="label" htmlFor="domain">{platform === "SHOPIFY" ? "Dominio de Shopify" : "URL de la tienda"}</label>
+          <label className="label" htmlFor="domain">{platform === "SHOPIFY" ? "Dominio interno de Shopify" : "URL de la tienda"}</label>
           <input id="domain" name="domain" defaultValue={v.domain} className="input mono" placeholder={platform === "SHOPIFY" ? "mitienda.myshopify.com" : "https://mitienda.com"} required />
+          {platform === "SHOPIFY" && (
+            <p className="mt-1.5 text-xs text-ink-400">Shopify → Configuración → Dominios → el que termina en <b>.myshopify.com</b>. No es un email ni tu dominio propio.</p>
+          )}
         </div>
 
         {platform === "SHOPIFY" ? (
           <>
             <div>
-              <label className="label" htmlFor="accessToken">Token de acceso (Admin API)</label>
-              <input id="accessToken" name="accessToken" type="password" className="input mono" placeholder="shpat_…" required />
+              <span className="label">Tipo de app de Shopify</span>
+              <div className="grid grid-cols-2 gap-1 rounded-xl bg-line/50 p-1 text-sm font-medium">
+                <button type="button" onClick={() => setShopifyMode("dev")} className={clsx("rounded-lg px-3 py-2 transition", shopifyMode === "dev" ? "bg-white text-brand-700 shadow-sm" : "text-ink-500")}>
+                  Dev Dashboard (2026+)
+                </button>
+                <button type="button" onClick={() => setShopifyMode("legacy")} className={clsx("rounded-lg px-3 py-2 transition", shopifyMode === "legacy" ? "bg-white text-brand-700 shadow-sm" : "text-ink-500")}>
+                  App antigua (token shpat_)
+                </button>
+              </div>
             </div>
-            <div>
-              <label className="label" htmlFor="webhookSecret">Clave de firma de webhooks</label>
-              <input id="webhookSecret" name="webhookSecret" type="password" className="input mono" placeholder="Configuración → Notificaciones → Webhooks" />
-            </div>
+            {shopifyMode === "dev" ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="label" htmlFor="shopifyClientId">Client ID</label>
+                  <input id="shopifyClientId" name="shopifyClientId" defaultValue={v.shopifyClientId} className="input mono" autoComplete="off" required />
+                </div>
+                <div>
+                  <label className="label" htmlFor="shopifyClientSecret">Client secret</label>
+                  <input id="shopifyClientSecret" name="shopifyClientSecret" type="password" className="input mono" autoComplete="new-password" required />
+                </div>
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="label" htmlFor="accessToken">Token de acceso (Admin API)</label>
+                  <input id="accessToken" name="accessToken" type="password" className="input mono" placeholder="shpat_…" required />
+                </div>
+                <div>
+                  <label className="label" htmlFor="apiSecret">Clave secreta de la API</label>
+                  <input id="apiSecret" name="apiSecret" type="password" className="input mono" placeholder="Para verificar los webhooks" />
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
@@ -98,16 +141,18 @@ export function ConnectForm({ clients, defaultClient }: { clients: { id: string;
           </div>
         )}
 
-        {state?.error && <Notice tone="error">{state.error} Vuelve a introducir las claves secretas.</Notice>}
+        {state?.error && <Notice tone="error">{state.error} Vuelve a escribir la clave secreta.</Notice>}
         <SubmitButton className="w-full"><Plug className="h-4 w-4" /> Probar conexión y conectar</SubmitButton>
       </form>
 
       <div className="xl:col-span-2">
         <div className="rounded-2xl border border-brand-100 bg-gradient-to-br from-brand-50/80 via-white/80 to-aqua-50/80 p-6 backdrop-blur">
           <div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Paso a paso</div>
-          <h3 className="mt-2 text-lg font-semibold text-ink-900">Cómo conectar {platform === "SHOPIFY" ? "Shopify" : "WooCommerce"}</h3>
+          <h3 className="mt-2 text-lg font-semibold text-ink-900">
+            Cómo conectar {platform === "WOOCOMMERCE" ? "WooCommerce" : shopifyMode === "dev" ? "Shopify (Dev Dashboard)" : "Shopify (app antigua)"}
+          </h3>
           <ol className="mt-5 space-y-4">
-            {GUIDE[platform].map((step, i) => (
+            {GUIDE[guide].map((step, i) => (
               <li key={i} className="flex gap-3">
                 <span className="mono flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-aqua-500 text-xs font-semibold text-white">
                   {i + 1}

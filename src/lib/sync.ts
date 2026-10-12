@@ -1,16 +1,41 @@
 import type { Store } from "@prisma/client";
 import { db } from "@/lib/db";
-import { decrypt } from "@/lib/crypto";
+import { decrypt, encrypt } from "@/lib/crypto";
 import * as shopify from "@/lib/integrations/shopify";
 import * as woo from "@/lib/integrations/woocommerce";
 import type { ExternalOrder, ExternalProduct, Shipment } from "@/lib/types";
 
-type StoreCreds = Pick<Store, "platform" | "domain" | "accessToken" | "consumerKey" | "consumerSecret">;
+type StoreCreds = Pick<Store, "platform" | "domain" | "accessToken" | "consumerKey" | "consumerSecret"> &
+  Partial<Pick<Store, "id" | "shopifyClientId" | "shopifyClientSecret" | "tokenExpiresAt">>;
 
-function shopifyCreds(store: StoreCreds) {
+/**
+ * Credenciales de Shopify. App del Dev Dashboard: usa el token en caché si le quedan
+ * más de 5 minutos; si no, pide uno nuevo y lo guarda cifrado. App antigua: token fijo.
+ */
+async function shopifyCreds(store: StoreCreds) {
+  const clientId = decrypt(store.shopifyClientId);
+  const clientSecret = decrypt(store.shopifyClientSecret);
+  if (clientId && clientSecret) {
+    const cached = decrypt(store.accessToken);
+    if (cached && store.tokenExpiresAt && store.tokenExpiresAt.getTime() - Date.now() > 5 * 60_000) {
+      return { domain: store.domain, accessToken: cached };
+    }
+    const fresh = await shopify.clientCredentialsToken(store.domain, clientId, clientSecret);
+    if (store.id) {
+      await db.store.update({ where: { id: store.id }, data: { accessToken: encrypt(fresh.accessToken), tokenExpiresAt: fresh.expiresAt } });
+    }
+    return { domain: store.domain, accessToken: fresh.accessToken };
+  }
   const accessToken = decrypt(store.accessToken);
-  if (!accessToken) throw new Error("Falta el token de acceso de Shopify");
+  if (!accessToken) throw new Error("Faltan las credenciales de Shopify");
   return { domain: store.domain, accessToken };
+}
+
+/** Crea en Shopify los webhooks de pedidos que apuntan a esta instalación de Packia. */
+export async function registerShopifyWebhooks(storeId: string, appUrl: string) {
+  const store = await db.store.findUniqueOrThrow({ where: { id: storeId } });
+  if (store.platform !== "SHOPIFY" || store.isDemo) return [];
+  return shopify.registerWebhooks(await shopifyCreds(store), `${appUrl.replace(/\/+$/, "")}/api/webhooks/shopify`);
 }
 
 function wooCreds(store: StoreCreds) {
@@ -23,7 +48,7 @@ function wooCreds(store: StoreCreds) {
 /** Prueba credenciales (cifradas o en claro) antes de guardar una tienda. */
 export async function testStoreConnection(store: StoreCreds): Promise<string> {
   return store.platform === "SHOPIFY"
-    ? shopify.testConnection(shopifyCreds(store))
+    ? shopify.testConnection(await shopifyCreds(store))
     : woo.testConnection(wooCreds(store));
 }
 
@@ -82,7 +107,7 @@ export async function syncStore(storeId: string): Promise<{ orders: number; prod
   try {
     const [products, orders] =
       store.platform === "SHOPIFY"
-        ? await Promise.all([shopify.fetchProducts(shopifyCreds(store)), shopify.fetchOpenOrders(shopifyCreds(store))])
+        ? await shopifyCreds(store).then((c) => Promise.all([shopify.fetchProducts(c), shopify.fetchOpenOrders(c)]))
         : await Promise.all([woo.fetchProducts(wooCreds(store)), woo.fetchOpenOrders(wooCreds(store))]);
     await upsertProducts(store, products);
     const created = await upsertOrders(store, orders);
@@ -107,7 +132,7 @@ export async function shipOrder(orderId: string, shipment: Shipment) {
   if (!order.store.isDemo) {
     try {
       if (order.store.platform === "SHOPIFY") {
-        await shopify.fulfillOrder(shopifyCreds(order.store), order.externalId, shipment);
+        await shopify.fulfillOrder(await shopifyCreds(order.store), order.externalId, shipment);
       } else {
         await woo.fulfillOrder(wooCreds(order.store), order.externalId, shipment);
       }

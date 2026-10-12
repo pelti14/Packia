@@ -60,8 +60,14 @@ model Store {
   name           String
   /// Shopify: mitienda.myshopify.com · WooCommerce: https://mitienda.com
   domain         String
-  /// Cifrado (AES-256-GCM).
+  /// Cifrado (AES-256-GCM). Shopify: token fijo (app antigua) o token temporal en caché (Dev Dashboard).
   accessToken    String?
+  /// Shopify Dev Dashboard: Client ID (cifrado).
+  shopifyClientId     String?
+  /// Shopify Dev Dashboard: Client secret (cifrado). También firma los webhooks.
+  shopifyClientSecret String?
+  /// Caducidad del token temporal de Shopify (24 h).
+  tokenExpiresAt DateTime?
   /// Cifrado (AES-256-GCM).
   consumerKey    String?
   /// Cifrado (AES-256-GCM).

@@ -37,7 +37,7 @@ Documentación de negocio en [`docs/`](docs/): [cliente ideal](docs/cliente-idea
 
 - Login con **Supabase Auth**. Todas las páginas exigen sesión, menos `/login` y los webhooks. Cada acción del servidor comprueba el rol del usuario.
 - Los usuarios con rol Cliente solo pueden consultar los datos de su empresa.
-- Los tokens y claves de las tiendas y de Sendcloud se guardan **cifrados con AES-256-GCM** usando `ENCRYPTION_KEY`.
+- Los tokens, Client secrets y claves de las tiendas y de Sendcloud se guardan **cifrados con AES-256-GCM** usando `ENCRYPTION_KEY`.
 - El asistente `/setup` solo permite crear el primer administrador. Después queda bloqueado.
 - **RLS activado** en todas las tablas: la API pública de Supabase, que funciona con la clave anónima, no puede leer ni escribir nada. La app accede por Prisma.
 - Los webhooks se verifican con la firma HMAC de Shopify o WooCommerce.
@@ -67,12 +67,8 @@ Comandos útiles:
 
 ## Conectar una tienda
 
-**Shopify**
-1. En Configuración → Apps y canales de venta → Desarrollar apps, crea una app.
-2. Dale los permisos `read_orders`, `read_products`, `read_merchant_managed_fulfillment_orders` y `write_merchant_managed_fulfillment_orders`. Activa también el acceso a datos protegidos del cliente, que hace falta para leer la dirección.
-3. Instala la app y copia el token `shpat_…`.
-4. En Configuración → Notificaciones → Webhooks, copia la clave de firma y crea los webhooks de pedido (JSON) apuntando a `/api/webhooks/shopify`.
-5. En Packia, ve a Tiendas → Conectar tienda.
+**Shopify**: desde 2026 la app la crea el dueño de la tienda en el *Dev Dashboard* y da a Packia el dominio `.myshopify.com`, el **Client ID** y el **Client secret**. Packia pide y renueva el token solo (dura 24 h) y crea los webhooks automáticamente.
+Guía para enviar a los clientes: **[docs/conectar-shopify.md](docs/conectar-shopify.md)**. Las apps antiguas con token `shpat_` también se aceptan.
 
 **WooCommerce**
 1. En WooCommerce → Ajustes → Avanzado → REST API, crea una clave con permisos de lectura y escritura.
