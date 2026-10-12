@@ -1,5 +1,6 @@
 import { syncAllStores } from "@/lib/sync";
 import { maybeAutoInvoice } from "@/lib/billing";
+import { applyDuePlanRequests } from "@/lib/plans";
 
 const g = globalThis as unknown as { __packiaScheduler?: NodeJS.Timeout };
 
@@ -16,6 +17,9 @@ export function startScheduler() {
     try {
       const r = await syncAllStores();
       if (r.ran && (r.orders || r.errors)) console.log(`[sync] ${r.stores} tiendas · ${r.orders} pedidos nuevos · ${r.errors} errores`);
+      if (!r.ran) return; // otra instancia lo está haciendo, o falta actualizar la base de datos
+      const changed = await applyDuePlanRequests();
+      if (changed) console.log(`[planes] ${changed} cambios de plan programados aplicados`);
       const inv = await maybeAutoInvoice();
       if (inv?.issued.length) console.log(`[facturación] ${inv.issued.length} facturas emitidas automáticamente`);
     } catch (err) {

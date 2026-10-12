@@ -1,4 +1,5 @@
-import { Search } from "lucide-react";
+import Link from "next/link";
+import { Presentation, Search } from "lucide-react";
 import { requireUser, ROLE_LABEL } from "@/lib/auth";
 import { getBadges } from "@/lib/notifications";
 import { NotificationBell, NotificationsProvider } from "@/components/notifications";
@@ -32,6 +33,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <input name="q" placeholder="Buscar pedido, destinatario o SKU…" className="w-full bg-transparent text-sm outline-none placeholder:text-ink-400" />
           </form>
           <div className="flex items-center gap-3">
+            {user.role !== "CLIENT" && (
+              <Link href="/demo" className="glass flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-brand-600 hover:text-brand-700" title="Modo demo para enseñar Packia a un cliente">
+                <Presentation className="h-4 w-4" /> <span className="hidden md:inline">Demo</span>
+              </Link>
+            )}
             <div className="hidden sm:block">
               <CutoffClock />
             </div>

@@ -46,6 +46,8 @@ model Client {
   serviceStartAt     DateTime?
   /// Semanas de prueba gratis desde serviceStartAt. Después se factura y el primer mes se prorratea.
   trialWeeks         Int       @default(0)
+  /// Último día de servicio (baja confirmada). Después no se factura nada.
+  serviceEndAt       DateTime?
   /// Envío por defecto: "packia:GLS" (etiqueta interna) o "sendcloud:1402" (método de Sendcloud).
   defaultShipping    String?
   /// Cuenta de Sendcloud propia del cliente, con sus contratos de agencia (cifrado). Si está vacío se usa la de Packia.
@@ -62,6 +64,8 @@ model Client {
   users              Profile[]
   customers          StoreCustomer[]
   notifications      Notification[]
+  planChanges        PlanChange[]
+  planRequests       PlanRequest[]
 }
 
 /// Tienda online conectada (Shopify o WooCommerce). Las credenciales se guardan cifradas.
@@ -341,4 +345,66 @@ model SyncLock {
   id          String   @id
   lockedUntil DateTime
   lastRunAt   DateTime?
+}
+
+/// Planes de precios editables en Ajustes (se copian al cliente al elegirlos).
+model PlanConfig {
+  /// ARRANQUE | CRECIMIENTO | ESCALA
+  key        String   @id
+  label      String
+  orders     Int
+  feeCents   Int
+  extraCents Int
+  sortOrder  Int      @default(0)
+  active     Boolean  @default(true)
+  updatedAt  DateTime @updatedAt
+}
+
+/// Historial de cambios de condiciones de un cliente, para prorratear por días.
+model PlanChange {
+  id             String   @id @default(cuid())
+  clientId       String
+  client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  /// Desde cuándo valen las nuevas condiciones (00:00 de Madrid).
+  effectiveAt    DateTime
+  fromPlan       String
+  fromOrders     Int
+  fromFeeCents   Int
+  fromExtraCents Int
+  toPlan         String
+  toOrders       Int
+  toFeeCents     Int
+  toExtraCents   Int
+  /// ADMIN | CLIENT | SETTINGS
+  source         String
+  createdBy      String?
+  createdAt      DateTime @default(now())
+
+  @@index([clientId, effectiveAt])
+}
+
+/// Peticiones del cliente (subir, bajar, baja) y cambios programados.
+model PlanRequest {
+  id          String    @id @default(cuid())
+  clientId    String
+  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  /// UPGRADE | DOWNGRADE | CANCEL | CHANGE
+  type        String
+  /// Plan de destino (UPGRADE, DOWNGRADE, CHANGE).
+  plan        String?
+  /// Condiciones de destino para CHANGE programado por un administrador.
+  orders      Int?
+  feeCents    Int?
+  extraCents  Int?
+  /// Fecha de efecto. En CANCEL es el último día de servicio.
+  effectiveAt DateTime
+  /// PENDING | APPLIED | REJECTED | WITHDRAWN
+  status      String    @default("PENDING")
+  note        String?
+  createdBy   String?
+  createdAt   DateTime  @default(now())
+  resolvedAt  DateTime?
+  resolvedBy  String?
+
+  @@index([status, effectiveAt])
 }

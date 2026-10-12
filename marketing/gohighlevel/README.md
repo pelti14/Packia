@@ -13,6 +13,12 @@ Para ver cómo quedan, abre cada archivo en el navegador (doble clic).
 > **Cambia antes de pegar** (con «Buscar y reemplazar» de cualquier editor de texto, en los 3 archivos):
 > - `34600000000` → tu WhatsApp con prefijo y sin `+` ni espacios. Ejemplo: `34612345678`.
 > - `hola@packia.es` → tu email.
+> - `https://floralwhite-dugong-101545.hostingersite.com` → la dirección de tu Packia, si cambias de dominio.
+
+### Precios conectados con Packia
+La web y la landing leen los precios en directo de Packia (`/api/public/planes`). Si los cambias en **Packia → Ajustes → Planes y precios**, la web se actualiza sola en unos minutos, sin tocar GoHighLevel. Si Packia no responde, se muestran los precios escritos en el HTML.
+
+Los archivos fuente están en `src/`. Para regenerar las páginas: `python3 marketing/gohighlevel/src/build.py marketing/gohighlevel/src marketing/gohighlevel`.
 
 ---
 
@@ -90,6 +96,6 @@ Para ver cómo quedan, abre cada archivo en el navegador (doble clic).
 - **Creatividades:** vídeo real del almacén y del packing, «tu salón lleno de cajas», comparativa de lo que cuesta hacerlo tú frente a la cuota fija, y una pantalla del panel de Packia (usa el **modo demo**).
 
 ## Notas
-- Los textos y precios coinciden con los planes de la app: Arranque 480 €, Crecimiento 850 € y Escala 1.200 €, con 2 semanas de prueba.
+- Los precios salen de los planes de la app (Ajustes). Por defecto: Arranque 480 €, Crecimiento 850 € y Escala 1.200 €, con 2 semanas de prueba.
 - No hay testimonios inventados. Cuando tengas los primeros clientes, añade sus opiniones y cifras reales: es lo que más convierte.
 - Todo el estilo va dentro de la clase `.pk`, así no se mezcla con los estilos de GHL.

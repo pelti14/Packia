@@ -17,12 +17,13 @@ Documentación de negocio en [`docs/`](docs/): [cliente ideal](docs/cliente-idea
 | **Modo demo** | `/demo`, solo para administradores y almacén. Una tienda ficticia (Lumen Cosmetics) para enseñar Packia a un cliente potencial: vista del almacén y vista del cliente, simular pedidos, validar un producto, escanear, embalar, etiqueta PDF de ejemplo, recepciones, devoluciones y una factura con prueba y prorrateo. No escribe nada en la base de datos; **Reiniciar demo** la deja como al principio. |
 | **Clientes tienda** | Los compradores de cada tienda, guardados solos con cada pedido. Búsqueda y **exportación a CSV** (Excel). |
 | **Notificaciones** | Campana con avisos que saltan al momento: pedidos nuevos, cancelados por la tienda, mercancía avisada o recibida, devoluciones, stock bajo, facturas y errores de sincronización. El menú muestra contadores **verdes** (tareas pendientes) o **rojos** (urgente: retrasos, errores). |
-| **Facturación** | Uso del mes por cliente: pedidos enviados frente a los incluidos, exceso y devoluciones. Desplegable para ir a cualquier mes (36 atrás). **Semanas de prueba gratis** por cliente y **prorrateo** del primer mes de pago. Botón **«Emitir las N facturas»** del mes y **facturación automática** del mes anterior los días 1–5 (activable en Ajustes). Facturas PK-AAAA-0001 con IVA, imprimibles en PDF, y control de cobro. |
-| **Clientes** | Plan y tarifas de cada cliente (cuota, pedidos incluidos, precio por pedido adicional y por devolución), datos fiscales, **repartidor por defecto** y, opcionalmente, **su propia cuenta de Sendcloud** con sus contratos de agencia. |
+| **Facturación** | Uso del mes por cliente: pedidos enviados frente a los incluidos, exceso y devoluciones. Desplegable para ir a cualquier mes (36 atrás). **Semanas de prueba gratis** por cliente y **prorrateo** del primer mes de pago. Botón **«Emitir las N facturas»** del mes y **facturación automática** del mes anterior los días 1–5 (activable en Ajustes). **«Facturar hasta hoy»** (o hasta un día concreto) en cualquier momento del mes; al cerrar el mes solo se factura el resto. **Cambios de plan a mitad de mes** prorrateados por días: cuota y pedidos incluidos se reparten entre el plan anterior y el nuevo. Facturas PK-AAAA-0001 con IVA, imprimibles en PDF, y control de cobro. |
+| **Mi plan** (cliente) | El cliente ve su plan y su consumo, **sube de plan** al momento (prorrateado), **baja de plan** desde el día 1 del mes siguiente o **solicita la baja**, que confirma un administrador. |
+| **Clientes** | Cambio de plan aplicable desde hoy (prorrateado), desde el día 1 de este mes o del siguiente. Peticiones del cliente, baja con último día de servicio, historial de planes y facturar hasta un día. Plan y tarifas de cada cliente (cuota, pedidos incluidos, precio por pedido adicional y por devolución), datos fiscales, **repartidor por defecto** y, opcionalmente, **su propia cuenta de Sendcloud** con sus contratos de agencia. |
 | **Sincronización** | Además de los webhooks, Packia consulta todas las tiendas **cada minuto** (productos cada 30 min). Respaldo opcional con cron externo en `/api/cron/sync?key=CRON_SECRET`. |
 | **Tiendas** | Conexión con Shopify y WooCommerce, sincronización y webhooks. |
 | **Usuarios** | Alta y edición de usuarios: nombre, email, rol, empresa y contraseña. |
-| **Ajustes** | Datos fiscales, remitente de las etiquetas, claves de Sendcloud y estado del sistema (incluido el botón para actualizar la base de datos). |
+| **Ajustes** | **Planes y precios** editables (opcionalmente aplicados a los clientes actuales desde hoy o desde el mes que viene; la web de GoHighLevel los lee de `/api/public/planes`). Datos fiscales, remitente de las etiquetas, claves de Sendcloud y estado del sistema (incluido el botón para actualizar la base de datos). |
 
 ### Roles
 
@@ -30,7 +31,7 @@ Documentación de negocio en [`docs/`](docs/): [cliente ideal](docs/cliente-idea
 | --- | --- |
 | **Administrador** | Todo, incluida facturación, clientes, tiendas y usuarios. |
 | **Almacén** | Salida, recepción, devoluciones, inventario (y validar productos) y modo demo. Puede sincronizar tiendas. No ve facturación. |
-| **Cliente** | Solo los datos de **su** empresa: pedidos, stock, recepciones (puede avisar de entradas), devoluciones (puede registrarlas) y sus facturas. No ve Clientes tienda ni el modo demo. |
+| **Cliente** | Solo los datos de **su** empresa: pedidos, stock, recepciones (puede avisar de entradas), devoluciones (puede registrarlas), sus facturas y **Mi plan** (subir, bajar o pedir la baja). No ve Clientes tienda ni el modo demo. |
 
 ### Etiquetas de envío
 

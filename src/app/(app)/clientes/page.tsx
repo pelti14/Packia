@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { Plug, Users } from "lucide-react";
 import { db } from "@/lib/db";
+import { getPlans, monthlyIncluded } from "@/lib/plans";
 import { requireUser } from "@/lib/auth";
 import { eur, formatDateOnly } from "@/lib/format";
 import { billableFrom } from "@/lib/billing";
 import { startOfMonth } from "@/lib/format";
-import { PLANS, type Plan } from "@/lib/types";
 import { Card, CardHeader, EmptyState, PageHeader, PlatformBadge, SearchBar } from "@/components/ui";
 import { NewClientForm } from "./new-client-form";
 
@@ -21,6 +21,8 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
       _count: { select: { products: true, orders: { where: { status: "SHIPPED", shippedAt: { gte: startOfMonth() } } } } },
     },
   });
+  const quotaOf = new Map(await Promise.all(clients.map(async (c) => [c.id, await monthlyIncluded(c)] as const)));
+  const plans = await getPlans();
 
   return (
     <>
@@ -31,7 +33,8 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
         <div className={admin ? "grid content-start gap-4 md:grid-cols-2 xl:col-span-2" : "grid content-start gap-4 md:grid-cols-2 xl:col-span-3"}>
           {clients.map((c) => {
             const used = c._count.orders;
-            const pct = Math.min(100, Math.round((used / c.planOrders) * 100));
+            const quota = quotaOf.get(c.id) ?? c.planOrders;
+            const pct = Math.min(100, Math.round((used / Math.max(1, quota)) * 100));
             return (
               <Card key={c.id} className="p-5">
                 <div className="flex items-start justify-between gap-3">
@@ -46,7 +49,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <span className="rounded-full bg-brand-50 px-2.5 py-1 text-[11px] font-semibold text-brand-600 ring-1 ring-brand-100">
-                      {PLANS[c.plan as Plan]?.label ?? c.plan}
+                      {plans.find((x) => x.plan === c.plan)?.label ?? c.plan}
                     </span>
                     {billableFrom(c) > new Date() && (
                       <span className="rounded-full bg-aqua-50 px-2.5 py-1 text-[11px] font-semibold text-aqua-600 ring-1 ring-aqua-500/25">
@@ -58,7 +61,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
 
                 <div className="mt-5 flex items-baseline justify-between text-sm">
                   <span className="text-ink-500">Enviados este mes{admin && ` · ${eur(c.monthlyFeeCents)}/mes`}</span>
-                  <span className="mono"><b className="text-ink-900">{used}</b> <span className="text-ink-400">/ {c.planOrders}</span></span>
+                  <span className="mono"><b className="text-ink-900">{used}</b> <span className="text-ink-400">/ {quota}</span></span>
                 </div>
                 <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-line/70">
                   <div className="h-full rounded-full bg-gradient-to-r from-brand-500 to-aqua-400" style={{ width: `${pct}%` }} />
@@ -86,7 +89,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
         {admin && (
           <Card className="h-fit">
             <CardHeader title="Nuevo cliente" subtitle="Tarifas por defecto del plan; ajústalas en su ficha" />
-            <NewClientForm />
+            <NewClientForm plans={plans} />
           </Card>
         )}
       </div>

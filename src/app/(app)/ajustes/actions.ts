@@ -55,3 +55,52 @@ export async function testSendcloud(_: FormState, form: FormData): Promise<FormS
     return { error: err instanceof Error ? err.message : String(err) };
   }
 }
+
+/** Precios de los planes. Opcionalmente se aplican también a los clientes que ya tienen ese plan. */
+export async function savePlans(_: FormState, form: FormData): Promise<FormState> {
+  const admin = await assertRole(["ADMIN"]);
+  const { changeTerms, getPlans, nextMonthStart } = await import("@/lib/plans");
+  const { startOfDay } = await import("@/lib/schedule");
+  const plans = await getPlans();
+  const values = Object.fromEntries([...form.entries()].map(([k, v]) => [k, String(v)]));
+  const toCents = (v: string) => {
+    const n = Number(v.replace(",", "."));
+    return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) : null;
+  };
+  const updates = [];
+  for (const [i, p] of plans.entries()) {
+    const label = str(form.get(`label_${p.plan}`)) || p.label;
+    const orders = Number(str(form.get(`orders_${p.plan}`)));
+    const feeCents = toCents(str(form.get(`fee_${p.plan}`)));
+    const extraCents = toCents(str(form.get(`extra_${p.plan}`)));
+    if (!Number.isInteger(orders) || orders <= 0 || feeCents === null || extraCents === null) return { error: `Revisa los datos del plan ${p.label}`, values };
+    updates.push({ key: p.plan, label, orders, feeCents, extraCents, sortOrder: i + 1 });
+  }
+  for (const u of updates) {
+    await db.planConfig.upsert({ where: { key: u.key }, create: u, update: { label: u.label, orders: u.orders, feeCents: u.feeCents, extraCents: u.extraCents } });
+  }
+
+  const apply = str(form.get("apply"));
+  let applied = 0;
+  if (apply === "today" || apply === "next") {
+    const by = admin.name || admin.email;
+    const clients = await db.client.findMany({ where: { plan: { in: updates.map((u) => u.key) }, OR: [{ serviceEndAt: null }, { serviceEndAt: { gte: startOfDay() } }] } });
+    for (const c of clients) {
+      const u = updates.find((x) => x.key === c.plan)!;
+      const terms = { plan: u.key, orders: u.orders, feeCents: u.feeCents, extraCents: u.extraCents };
+      if (apply === "today") {
+        if (await changeTerms(c.id, terms, startOfDay(), "SETTINGS", by)) applied++;
+      } else if (c.planOrders !== u.orders || c.monthlyFeeCents !== u.feeCents || c.extraOrderFeeCents !== u.extraCents) {
+        await db.planRequest.updateMany({ where: { clientId: c.id, status: "PENDING", type: "CHANGE" }, data: { status: "WITHDRAWN", resolvedAt: new Date(), resolvedBy: by } });
+        await db.planRequest.create({ data: { clientId: c.id, type: "CHANGE", plan: u.key, orders: u.orders, feeCents: u.feeCents, extraCents: u.extraCents, effectiveAt: nextMonthStart(), createdBy: by } });
+        applied++;
+      }
+    }
+  }
+  revalidatePath("/", "layout");
+  return {
+    success: applied
+      ? `Precios guardados y aplicados a ${applied} ${applied === 1 ? "cliente" : "clientes"} ${apply === "today" ? "desde hoy (prorrateado)" : "desde el día 1 del mes que viene"}`
+      : "Precios guardados. Se usarán para los clientes nuevos y los cambios de plan",
+  };
+}

@@ -4,20 +4,23 @@ import { getSettings } from "@/lib/settings";
 import { addDays, dayKey, monthKey, monthRange, shiftMonth, startOfDay } from "@/lib/schedule";
 import { eur, formatDateOnly, formatMonth } from "@/lib/format";
 import { notify } from "@/lib/notifications";
-import { PLANS, type Plan } from "@/lib/types";
+import { applyDuePlanRequests, getPlans, termsTimeline } from "@/lib/plans";
 
 export const TAX_RATE = 21;
 
 export type Line = { description: string; quantity: number; unitPriceCents: number; amountCents: number };
 
-export type BillingStatus = "NOT_STARTED" | "TRIAL" | "PRORATED" | "FULL";
+export type BillingStatus = "NOT_STARTED" | "TRIAL" | "PRORATED" | "FULL" | "ENDED";
 
 export type Usage = {
   client: Client;
   status: BillingStatus;
+  /** Periodo pedido [start, end). */
+  start: Date;
+  end: Date;
   /** Desde cuándo se cobra (fin de la prueba). */
   billableFrom: Date;
-  /** Parte del mes que se cobra (1 = mes completo). */
+  /** Parte del mes que se cobra (1 = mes completo con el mismo plan o no). */
   fraction: number;
   shippedOrders: number;
   includedOrders: number;
@@ -28,69 +31,86 @@ export type Usage = {
 };
 
 const DAY = 86_400_000;
+const days = (a: Date, b: Date) => Math.round((b.getTime() - a.getTime()) / DAY);
+/** Día anterior a una fecha exclusiva, para mostrar «del 1 al 14». */
+const lastDay = (exclusiveEnd: Date) => new Date(exclusiveEnd.getTime() - DAY);
 
 /** Fin de la prueba = alta + semanas de prueba (a las 00:00 de Madrid). */
 export function billableFrom(client: Pick<Client, "serviceStartAt" | "createdAt" | "trialWeeks">) {
   return addDays(startOfDay(client.serviceStartAt ?? client.createdAt), client.trialWeeks * 7);
 }
 
+/** Primer instante sin servicio (día siguiente al último día), o null si sigue activo. */
+export function serviceEnd(client: Pick<Client, "serviceEndAt">) {
+  return client.serviceEndAt ? addDays(startOfDay(client.serviceEndAt), 1) : null;
+}
+
 /**
- * Consumo de un cliente en un mes "AAAA-MM": cuota + pedidos de exceso + devoluciones procesadas.
- * Durante la prueba no se cobra nada. El mes en que empieza a pagar se prorratea por días
- * (cuota y pedidos incluidos) y solo cuentan los pedidos y devoluciones desde ese día.
+ * Consumo de un cliente entre `start` y `end` (dentro de un mismo mes): cuota + pedidos de exceso
+ * + devoluciones procesadas. Durante la prueba y después de la baja no se cobra nada.
+ * La cuota y los pedidos incluidos se reparten por días entre los planes que haya tenido:
+ * si sube de plan el día 16, la segunda quincena cuenta con la cuota y los pedidos del plan nuevo.
  */
-export async function usageFor(client: Client, month: string): Promise<Usage> {
-  const { start, end } = monthRange(month);
+export async function usageForRange(client: Client, start: Date, end: Date): Promise<Usage> {
+  const month = monthKey(start);
+  const { start: mStart, end: mEnd } = monthRange(month);
+  const daysInMonth = days(mStart, mEnd);
   const serviceStart = startOfDay(client.serviceStartAt ?? client.createdAt);
   const from = billableFrom(client);
-  const base = { client, billableFrom: from, shippedOrders: 0, includedOrders: 0, extraOrders: 0, processedReturns: 0 };
+  const stop = serviceEnd(client);
+  const base = { client, start, end, billableFrom: from, fraction: 0, shippedOrders: 0, includedOrders: 0, extraOrders: 0, processedReturns: 0, lines: [] as Line[], subtotalCents: 0 };
 
-  if (serviceStart >= end) return { ...base, status: "NOT_STARTED", fraction: 0, lines: [], subtotalCents: 0 };
+  if (serviceStart >= end) return { ...base, status: "NOT_STARTED" };
+  if (stop && stop <= start) return { ...base, status: "ENDED" };
 
-  const trialStart = serviceStart;
   const trialLine = (until: Date): Line => ({
-    description: `Periodo de prueba gratis (${client.trialWeeks} ${client.trialWeeks === 1 ? "semana" : "semanas"}: del ${formatDateOnly(trialStart)} al ${formatDateOnly(new Date(until.getTime() - DAY))})`,
+    description: `Periodo de prueba gratis (${client.trialWeeks} ${client.trialWeeks === 1 ? "semana" : "semanas"}: del ${formatDateOnly(serviceStart)} al ${formatDateOnly(lastDay(until))})`,
     quantity: 1,
     unitPriceCents: 0,
     amountCents: 0,
   });
-
-  if (from >= end) return { ...base, status: "TRIAL", fraction: 0, lines: [trialLine(end)], subtotalCents: 0 };
+  if (from >= end) return { ...base, status: "TRIAL", lines: [trialLine(from)] };
 
   const periodStart = from > start ? from : start;
-  const daysInMonth = Math.round((end.getTime() - start.getTime()) / DAY);
-  const days = Math.round((end.getTime() - periodStart.getTime()) / DAY);
-  const fraction = Math.min(1, days / daysInMonth);
-  const prorated = fraction < 1;
+  const periodEnd = stop && stop < end ? stop : end;
 
-  const [shippedOrders, processedReturns] = await Promise.all([
-    db.order.count({ where: { clientId: client.id, status: "SHIPPED", shippedAt: { gte: periodStart, lt: end } } }),
-    db.return.count({ where: { clientId: client.id, status: "PROCESSED", processedAt: { gte: periodStart, lt: end } } }),
+  const [segments, shippedOrders, processedReturns, plans] = await Promise.all([
+    termsTimeline(client, periodStart, periodEnd),
+    db.order.count({ where: { clientId: client.id, status: "SHIPPED", shippedAt: { gte: periodStart, lt: periodEnd } } }),
+    db.return.count({ where: { clientId: client.id, status: "PROCESSED", processedAt: { gte: periodStart, lt: periodEnd } } }),
+    getPlans(),
   ]);
-  const includedOrders = Math.round(client.planOrders * fraction);
-  const feeCents = Math.round(client.monthlyFeeCents * fraction);
-  const extraOrders = Math.max(0, shippedOrders - includedOrders);
-  const planLabel = PLANS[client.plan as Plan]?.label ?? client.plan;
+  const label = (plan: string) => plans.find((p) => p.plan === plan)?.label ?? plan;
 
   const lines: Line[] = [];
-  if (prorated && client.trialWeeks > 0 && from > start) lines.push(trialLine(from));
-  lines.push({
-    description: prorated
-      ? `Cuota plan ${planLabel}, prorrateada ${days}/${daysInMonth} días desde el ${formatDateOnly(periodStart)} (incluye ${includedOrders} pedidos)`
-      : `Cuota plan ${planLabel} (incluye ${client.planOrders} pedidos)`,
-    quantity: 1,
-    unitPriceCents: feeCents,
-    amountCents: feeCents,
-  });
-  if (extraOrders) {
-    lines.push({ description: "Pedidos adicionales al plan", quantity: extraOrders, unitPriceCents: client.extraOrderFeeCents, amountCents: extraOrders * client.extraOrderFeeCents });
+  if (client.trialWeeks > 0 && from > start && from <= end) lines.push(trialLine(from));
+  let included = 0;
+  for (const s of segments) {
+    const d = days(s.start, s.end);
+    const full = d >= daysInMonth;
+    const fee = Math.round((s.terms.feeCents * d) / daysInMonth);
+    const inc = (s.terms.orders * d) / daysInMonth;
+    included += inc;
+    lines.push({
+      description: full
+        ? `Cuota plan ${label(s.terms.plan)} (incluye ${s.terms.orders} pedidos)`
+        : `Cuota plan ${label(s.terms.plan)} del ${formatDateOnly(s.start)} al ${formatDateOnly(lastDay(s.end))}: ${d}/${daysInMonth} días (incluye ${Math.round(inc)} de ${s.terms.orders} pedidos)`,
+      quantity: 1,
+      unitPriceCents: fee,
+      amountCents: fee,
+    });
   }
-  if (processedReturns) {
-    lines.push({ description: "Devoluciones procesadas", quantity: processedReturns, unitPriceCents: client.returnFeeCents, amountCents: processedReturns * client.returnFeeCents });
-  }
+  const includedOrders = Math.round(included);
+  const extraOrders = Math.max(0, shippedOrders - includedOrders);
+  // El exceso se cobra al precio del plan vigente al final del periodo.
+  const extraCents = segments.at(-1)?.terms.extraCents ?? client.extraOrderFeeCents;
+  if (extraOrders) lines.push({ description: `Pedidos adicionales (enviados ${shippedOrders}, incluidos ${includedOrders})`, quantity: extraOrders, unitPriceCents: extraCents, amountCents: extraOrders * extraCents });
+  if (processedReturns) lines.push({ description: "Devoluciones procesadas", quantity: processedReturns, unitPriceCents: client.returnFeeCents, amountCents: processedReturns * client.returnFeeCents });
+
+  const fraction = Math.min(1, days(periodStart, periodEnd) / daysInMonth);
   return {
     ...base,
-    status: prorated ? "PRORATED" : "FULL",
+    status: fraction < 1 ? "PRORATED" : "FULL",
     fraction,
     shippedOrders,
     includedOrders,
@@ -101,18 +121,45 @@ export async function usageFor(client: Client, month: string): Promise<Usage> {
   };
 }
 
-/** Emite la factura de un mes cerrado. Numeración correlativa por año: PK-2026-0001. */
-export async function issueInvoice(clientId: string, month: string) {
-  const client = await db.client.findUniqueOrThrow({ where: { id: clientId } });
+/** Consumo del mes "AAAA-MM" completo. */
+export function usageFor(client: Client, month: string) {
   const { start, end } = monthRange(month);
-  const usage = await usageFor(client, month);
-  if (usage.subtotalCents <= 0) throw new Error(usage.status === "TRIAL" ? "Está en periodo de prueba: no hay nada que facturar" : "No hay nada que facturar ese mes");
+  return usageForRange(client, start, end);
+}
+
+/** Hasta dónde está facturado un cliente dentro del mes (inicio del mes si nada). */
+export async function invoicedUntil(clientId: string, month: string) {
+  const { start, end } = monthRange(month);
+  const last = await db.invoice.findFirst({ where: { clientId, periodStart: { gte: start, lt: end } }, orderBy: { periodEnd: "desc" }, select: { periodEnd: true } });
+  return last && last.periodEnd > start ? last.periodEnd : start;
+}
+
+/** Lo que falta por facturar de un mes hasta `until` (exclusivo; por defecto el fin del mes). */
+export async function pendingUsage(client: Client, month: string, until?: Date) {
+  const { end } = monthRange(month);
+  const from = await invoicedUntil(client.id, month);
+  const to = until && until < end ? until : end;
+  if (from >= to) return null;
+  return usageForRange(client, from, to);
+}
+
+/**
+ * Emite una factura de [start, end) dentro de un mismo mes. Numeración correlativa por año: PK-2026-0001.
+ * No se puede solapar con otra factura del cliente.
+ */
+export async function issueInvoice(clientId: string, start: Date, end: Date) {
+  const client = await db.client.findUniqueOrThrow({ where: { id: clientId } });
+  if (monthKey(start) !== monthKey(lastDay(end))) throw new Error("Una factura no puede abarcar dos meses");
+  const usage = await usageForRange(client, start, end);
+  if (usage.subtotalCents <= 0) {
+    throw new Error(usage.status === "TRIAL" ? "Está en periodo de prueba: no hay nada que facturar" : usage.status === "ENDED" ? "El servicio ya había terminado" : "No hay nada que facturar en ese periodo");
+  }
   const taxCents = Math.round((usage.subtotalCents * TAX_RATE) / 100);
-  const year = month.slice(0, 4);
+  const year = dayKey(start).slice(0, 4);
 
   return db.$transaction(async (tx) => {
-    const exists = await tx.invoice.findUnique({ where: { clientId_periodStart: { clientId, periodStart: start } } });
-    if (exists) throw new Error("Ya existe la factura de ese mes");
+    const overlap = await tx.invoice.findFirst({ where: { clientId, periodStart: { lt: end }, periodEnd: { gt: start } } });
+    if (overlap) throw new Error(`Ese periodo ya está en la factura ${overlap.number}`);
     const count = await tx.invoice.count({ where: { number: { startsWith: `PK-${year}-` } } });
     return tx.invoice.create({
       data: {
@@ -130,29 +177,64 @@ export async function issueInvoice(clientId: string, month: string) {
   });
 }
 
+/**
+ * Factura lo pendiente de un cliente hasta el día `untilDay` incluido (por defecto hoy).
+ * Sirve para facturar a mitad de mes (una baja, un acuerdo…). Al cerrar el mes se cobra solo el resto.
+ */
+export async function issueInvoiceUntil(clientId: string, untilDay = new Date()) {
+  await applyDuePlanRequests();
+  const month = monthKey(untilDay);
+  const end = addDays(startOfDay(untilDay), 1);
+  const prev = shiftMonth(month, -1);
+  const client = await db.client.findUniqueOrThrow({ where: { id: clientId } });
+  // El mes anterior tiene que estar cerrado antes (si tenía algo que facturar).
+  const prevPending = await pendingUsage(client, prev);
+  if (prevPending && prevPending.subtotalCents > 0) throw new Error(`Primero emite la factura de ${formatMonth(monthRange(prev).start)}`);
+  const from = await invoicedUntil(clientId, month);
+  if (from >= end) throw new Error(`Ya está facturado hasta el ${formatDateOnly(lastDay(from))}`);
+  return issueInvoice(clientId, from, end);
+}
+
+/** Factura lo que falte de un mes cerrado (después de facturas parciales, solo el resto). */
+export async function issueMonthInvoice(clientId: string, month: string) {
+  await applyDuePlanRequests();
+  const from = await invoicedUntil(clientId, month);
+  const { end } = monthRange(month);
+  if (from >= end) throw new Error("Ese mes ya está facturado entero");
+  return issueInvoice(clientId, from, end);
+}
+
 /** Datos fiscales de Packia para la factura. */
 export async function issuer() {
   return (await getSettings()).company;
 }
 
-/** Emite las facturas que falten de un mes cerrado (se salta las de importe 0: prueba o sin alta). */
+/** Emite las facturas que falten de un mes cerrado (se salta las de importe 0: prueba, sin alta o de baja). */
 export async function issueAllInvoices(month: string, now = new Date()) {
   if (month >= monthKey(now)) throw new Error("Solo se facturan meses cerrados");
+  await applyDuePlanRequests(now);
   const { start } = monthRange(month);
-  const clients = await db.client.findMany({ where: { invoices: { none: { periodStart: start } } } });
+  const clients = await db.client.findMany();
   const issued: { id: string; number: string; clientId: string; totalCents: number }[] = [];
   let skipped = 0;
   for (const client of clients) {
-    const usage = await usageFor(client, month);
-    if (usage.subtotalCents <= 0) {
+    const usage = await pendingUsage(client, month);
+    if (!usage || usage.subtotalCents <= 0) {
       skipped++;
       continue;
     }
-    const inv = await issueInvoice(client.id, month);
+    const inv = await issueInvoice(client.id, usage.start, usage.end);
     issued.push({ id: inv.id, number: inv.number, clientId: client.id, totalCents: inv.totalCents });
     await notify({ title: `Factura ${inv.number} emitida`, body: `${formatMonth(start)} · total ${eur(inv.totalCents)}`, href: `/facturacion/${inv.id}`, clientId: client.id, tone: "info", audience: "ALL" });
   }
   return { issued, skipped };
+}
+
+/** Texto del periodo de una factura: «Octubre de 2026» o «1 oct – 12 oct 2026». */
+export function invoicePeriodLabel(i: { periodStart: Date; periodEnd: Date }) {
+  const { start, end } = monthRange(monthKey(i.periodStart));
+  if (i.periodStart.getTime() === start.getTime() && i.periodEnd.getTime() === end.getTime()) return formatMonth(i.periodStart);
+  return `${formatDateOnly(i.periodStart)} – ${formatDateOnly(lastDay(i.periodEnd))}`;
 }
 
 /**

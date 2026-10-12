@@ -8,20 +8,26 @@ import { Notice } from "@/components/ui";
 import { BackLink, PageHeader } from "@/components/ui";
 import { ClientForm } from "./client-form";
 import { ShippingForm } from "./shipping-form";
+import { PlanPanel } from "./plan-panel";
+import { applyDuePlanRequests, getPlans } from "@/lib/plans";
 import { shippingOptionsFor } from "@/lib/labels";
 
 const euros = (cents: number) => (cents / 100).toFixed(2).replace(".", ",");
 
-export default async function ClientPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ClientPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ok?: string; error?: string }> }) {
   await requireUser(["ADMIN"]);
   const { id } = await params;
+  const { ok, error } = await searchParams;
+  await applyDuePlanRequests();
   const c = await db.client.findUnique({ where: { id } });
   if (!c) notFound();
-  const shipping = await shippingOptionsFor(c);
+  const [shipping, plans] = await Promise.all([shippingOptionsFor(c), getPlans()]);
   return (
     <>
       <BackLink href="/clientes">Clientes</BackLink>
       <PageHeader eyebrow="Cliente" title={c.name} description="Estos importes se usan para calcular su factura mensual." />
+      {ok && <div className="mb-4"><Notice tone="success">{ok}</Notice></div>}
+      {error && <div className="mb-4"><Notice tone="error">{error}</Notice></div>}
       {billableFrom(c) > new Date() && (
         <div className="mb-6"><Notice>En periodo de prueba hasta el {formatDateOnly(new Date(billableFrom(c).getTime() - 86_400_000))}. Se empieza a facturar el {formatDateOnly(billableFrom(c))}.</Notice></div>
       )}
@@ -39,8 +45,11 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
           returnFee: euros(c.returnFeeCents),
           serviceStartAt: dayKey(c.serviceStartAt ?? c.createdAt),
           trialWeeks: String(c.trialWeeks),
+          planEffective: "today",
         }}
+        plans={plans}
       />
+      <PlanPanel clientId={c.id} />
       <div className="mt-6">
         <ShippingForm
           clientId={c.id}

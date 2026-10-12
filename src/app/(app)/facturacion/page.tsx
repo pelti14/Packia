@@ -2,34 +2,41 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, FileText, Receipt } from "lucide-react";
 import { db } from "@/lib/db";
 import { clientScope, requireUser } from "@/lib/auth";
-import { usageFor } from "@/lib/billing";
+import { invoicePeriodLabel, pendingUsage, usageFor } from "@/lib/billing";
+import { applyDuePlanRequests, getPlans } from "@/lib/plans";
+import { addDays, startOfDay } from "@/lib/schedule";
 import { eur, formatDateOnly, formatMonth } from "@/lib/format";
 import { monthKey, monthRange, shiftMonth } from "@/lib/schedule";
-import { PLANS, type Plan } from "@/lib/types";
-import { Card, CardHeader, EmptyState, PageHeader, Pill, StatCard } from "@/components/ui";
+import { Card, CardHeader, EmptyState, Notice, PageHeader, Pill, StatCard } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
-import { issueAllAction, issueInvoiceAction, setInvoicePaid } from "./actions";
+import { issueAllAction, issueInvoiceAction, issueUntilAction, setInvoicePaid } from "./actions";
 import { MonthPicker } from "./month-picker";
 import { FileStack } from "lucide-react";
 
-export default async function FacturacionPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
+export default async function FacturacionPage({ searchParams }: { searchParams: Promise<{ month?: string; error?: string }> }) {
   const user = await requireUser(["ADMIN", "CLIENT"]);
+  await applyDuePlanRequests();
   const scope = clientScope(user);
   const current = monthKey();
-  const { month: m } = await searchParams;
+  const { month: m, error } = await searchParams;
   const month = m && /^\d{4}-\d{2}$/.test(m) && m <= current ? m : current;
-  const { start } = monthRange(month);
+  const { start, end } = monthRange(month);
+  const tomorrow = addDays(startOfDay(), 1);
   const closed = month < current;
   const admin = user.role === "ADMIN";
 
   const clients = await db.client.findMany({ where: scope.clientId ? { id: scope.clientId } : undefined, orderBy: { name: "asc" } });
-  const [usages, monthInvoices, invoices] = await Promise.all([
+  const [usages, pendings, monthInvoices, invoices, plans] = await Promise.all([
     Promise.all(clients.map((c) => usageFor(c, month))),
-    db.invoice.findMany({ where: { ...scope, periodStart: start } }),
+    Promise.all(clients.map((c) => pendingUsage(c, month, closed ? undefined : tomorrow))),
+    db.invoice.findMany({ where: { ...scope, periodStart: { gte: start, lt: end } }, orderBy: { periodStart: "asc" } }),
     db.invoice.findMany({ where: scope, include: { client: true }, orderBy: { issuedAt: "desc" }, take: 50 }),
+    getPlans(),
   ]);
-  const invoiceOf = new Map(monthInvoices.map((i) => [i.clientId, i]));
-  const pendingToIssue = usages.filter((u) => !invoiceOf.has(u.client.id) && u.subtotalCents > 0).length;
+  const planName = (p: string) => plans.find((x) => x.plan === p)?.label ?? p;
+  const invoicesOf = (clientId: string) => monthInvoices.filter((i) => i.clientId === clientId);
+  const pendingOf = new Map(pendings.map((p, i) => [clients[i].id, p]));
+  const pendingToIssue = pendings.filter((p) => p && p.subtotalCents > 0).length;
   const totalSubtotal = usages.reduce((s, u) => s + u.subtotalCents, 0);
   const totalShipped = usages.reduce((s, u) => s + u.shippedOrders, 0);
   const pendingCents = invoices.filter((i) => i.status === "ISSUED").reduce((s, i) => s + i.totalCents, 0);
@@ -60,6 +67,7 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
         }
       />
 
+      {error && <div className="mb-4"><Notice tone="error">{error}</Notice></div>}
       <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3">
         <StatCard label={closed ? "Facturable del mes" : "Acumulado del mes"} value={eur(totalSubtotal)} hint="Sin IVA" icon={Receipt} tone="brand" />
         <StatCard label="Pedidos enviados" value={totalShipped.toLocaleString("es-ES")} hint={formatMonth(start)} icon={FileText} tone="aqua" />
@@ -69,7 +77,7 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
       <Card className="mb-6 overflow-hidden">
         <CardHeader
           title="Cuota de pedidos por cliente"
-          subtitle={closed ? "Mes cerrado: listo para facturar" : "Mes en curso: se actualiza con cada envío. Se factura al cerrar el mes."}
+          subtitle={closed ? "Mes cerrado: listo para facturar" : "Mes en curso: se actualiza con cada envío. Se factura al cerrar el mes, o antes con «Facturar hasta hoy»."}
           action={
             closed && admin && pendingToIssue > 0 ? (
               <form action={issueAllAction.bind(null, month)}>
@@ -87,25 +95,28 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
                 <th className="table-head w-64">Pedidos enviados</th>
                 <th className="table-head">Exceso</th>
                 <th className="table-head">Devol.</th>
-                <th className="table-head text-right">Importe (sin IVA)</th>
-                {closed && <th className="table-head text-right">Factura</th>}
+                <th className="table-head text-right">Importe del mes</th>
+                <th className="table-head text-right">Facturas</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line/60">
               {usages.map((u) => {
                 const pct = Math.min(100, Math.round((u.shippedOrders / Math.max(1, u.includedOrders)) * 100));
-                const inv = invoiceOf.get(u.client.id);
+                const invs = invoicesOf(u.client.id);
+                const pending = pendingOf.get(u.client.id);
                 return (
                   <tr key={u.client.id}>
                     <td className="cell font-medium text-ink-900">
                       {admin ? <Link href={`/clientes/${u.client.id}`} className="hover:text-brand-600">{u.client.name}</Link> : u.client.name}
                     </td>
                     <td className="cell text-ink-700">
-                      {PLANS[u.client.plan as Plan]?.label ?? u.client.plan}
+                      {planName(u.client.plan)}
                       <div className="text-xs text-ink-400">{eur(u.client.monthlyFeeCents)}/mes</div>
                       {u.status === "TRIAL" && <div className="mt-1"><Pill tone="aqua">En prueba hasta {formatDateOnly(new Date(u.billableFrom.getTime() - 86_400_000))}</Pill></div>}
                       {u.status === "PRORATED" && <div className="mt-1"><Pill tone="amber">Prorrateado {Math.round(u.fraction * 100)}% · desde {formatDateOnly(u.billableFrom)}</Pill></div>}
                       {u.status === "NOT_STARTED" && <div className="mt-1"><Pill tone="ink">Aún no era cliente</Pill></div>}
+                      {u.status === "ENDED" && <div className="mt-1"><Pill tone="ink">De baja</Pill></div>}
+                      {u.client.serviceEndAt && u.status !== "ENDED" && <div className="mt-1"><Pill tone="rose">Baja el {formatDateOnly(u.client.serviceEndAt)}</Pill></div>}
                     </td>
                     <td className="cell">
                       <div className="mono text-sm"><b className="text-ink-900">{u.shippedOrders}</b> <span className="text-ink-400">/ {u.includedOrders}</span></div>
@@ -118,21 +129,24 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
                     </td>
                     <td className="cell mono text-ink-700">{u.processedReturns}</td>
                     <td className="cell mono text-right font-semibold text-ink-900">{eur(u.subtotalCents)}</td>
-                    {closed && (
-                      <td className="cell text-right">
-                        {inv ? (
-                          <Link href={`/facturacion/${inv.id}`} className="mono text-sm font-semibold text-brand-600 hover:underline">{inv.number}</Link>
-                        ) : u.subtotalCents <= 0 ? (
-                          <span className="text-xs text-ink-400">Nada que facturar</span>
-                        ) : admin ? (
-                          <form action={issueInvoiceAction.bind(null, u.client.id, month)}>
-                            <SubmitButton variant="ghost" className="px-3 py-1.5">Emitir factura</SubmitButton>
-                          </form>
+                    <td className="cell text-right">
+                      <div className="flex flex-col items-end gap-1.5">
+                        {invs.map((i) => (
+                          <Link key={i.id} href={`/facturacion/${i.id}`} className="mono text-sm font-semibold text-brand-600 hover:underline" title={invoicePeriodLabel(i)}>{i.number}</Link>
+                        ))}
+                        {pending && pending.subtotalCents > 0 ? (
+                          admin ? (
+                            <form action={closed ? issueInvoiceAction.bind(null, u.client.id, month) : issueUntilAction.bind(null, u.client.id, `/facturacion?month=${month}`)}>
+                              <SubmitButton variant="ghost" className="px-3 py-1.5">{closed ? (invs.length ? "Facturar el resto" : "Emitir factura") : "Facturar hasta hoy"} · {eur(pending.subtotalCents)}</SubmitButton>
+                            </form>
+                          ) : (
+                            <span className="text-xs text-ink-400">{closed ? "Pendiente" : "Se factura al cerrar el mes"}</span>
+                          )
                         ) : (
-                          <span className="text-xs text-ink-400">Pendiente</span>
+                          !invs.length && <span className="text-xs text-ink-400">{closed ? "Nada que facturar" : "—"}</span>
                         )}
-                      </td>
-                    )}
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
@@ -162,7 +176,7 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
                   <tr key={i.id} className="group transition hover:bg-brand-50/40">
                     <td className="cell"><Link href={`/facturacion/${i.id}`} className="mono font-semibold text-ink-900 group-hover:text-brand-600">{i.number}</Link></td>
                     <td className="cell text-ink-700">{i.client.name}</td>
-                    <td className="cell text-ink-700">{formatMonth(i.periodStart)}</td>
+                    <td className="cell text-ink-700">{invoicePeriodLabel(i)}</td>
                     <td className="cell text-ink-500">{formatDateOnly(i.issuedAt)}</td>
                     <td className="cell mono text-right font-semibold text-ink-900">{eur(i.totalCents)}</td>
                     <td className="cell"><Pill tone={i.status === "PAID" ? "mint" : "amber"}>{i.status === "PAID" ? "Pagada" : "Pendiente"}</Pill></td>

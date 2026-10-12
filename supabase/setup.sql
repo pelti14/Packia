@@ -292,7 +292,7 @@ ALTER TABLE "Invoice" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "InvoiceLine" ENABLE ROW LEVEL SECURITY;
 
 INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
-VALUES ('183bb438-b493-4c52-843d-54e80c25ad45', '10d15a52a8e24001cceeb9c7539d6c5f52df5221dffbccf056d82955d32e23c4', now(), '20261012030730_init', 1);
+VALUES ('4eba8370-ff18-4835-8d3c-b31b3b1cf292', '10d15a52a8e24001cceeb9c7539d6c5f52df5221dffbccf056d82955d32e23c4', now(), '20261012030730_init', 1);
 
 -- ════════ 20261012031806_app_settings ════════
 -- CreateTable
@@ -323,7 +323,7 @@ ALTER TABLE "AppSettings" ENABLE ROW LEVEL SECURITY;
 DO $$ BEGIN IF to_regclass('public._prisma_migrations') IS NOT NULL THEN ALTER TABLE "_prisma_migrations" ENABLE ROW LEVEL SECURITY; END IF; END $$;
 
 INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
-VALUES ('2677e5bb-44f7-44a1-ae47-f0f848e8653a', '43fa63b1c3f2360a1429f876f167cb5f74fc9d20c5e86ffa1d87a1a95fdb5aeb', now(), '20261012031806_app_settings', 1);
+VALUES ('deb3e66f-47bc-46c2-b2b6-65630d072389', '43fa63b1c3f2360a1429f876f167cb5f74fc9d20c5e86ffa1d87a1a95fdb5aeb', now(), '20261012031806_app_settings', 1);
 
 -- ════════ 20261012120000_shopify_dev_dashboard ════════
 -- AlterTable: Shopify Dev Dashboard (client credentials)
@@ -332,7 +332,7 @@ ADD COLUMN "shopifyClientSecret" TEXT,
 ADD COLUMN "tokenExpiresAt" TIMESTAMP(3);
 
 INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
-VALUES ('2e3b0ff4-194c-4a70-822d-07dad2e28251', 'b7d797a87902cbcea16cc86b75ca38d851ba8463137949e9c1a78c80f99065d2', now(), '20261012120000_shopify_dev_dashboard', 1);
+VALUES ('373908ab-8d1d-4a29-b624-21f1ee901bb0', 'b7d797a87902cbcea16cc86b75ca38d851ba8463137949e9c1a78c80f99065d2', now(), '20261012120000_shopify_dev_dashboard', 1);
 
 -- ════════ 20261012180000_v4_notifications_customers ════════
 -- AlterTable
@@ -416,7 +416,7 @@ ALTER TABLE "Notification" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "SyncLock" ENABLE ROW LEVEL SECURITY;
 
 INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
-VALUES ('98954e98-4501-4a33-9184-cef1156a6dc7', '1e652c6e81c1a088bd5a8008377f6f032066eec7fae43178778b05921f2aba05', now(), '20261012180000_v4_notifications_customers', 1);
+VALUES ('e80996ce-82fb-4db5-81c7-7de0f40e785c', '1e652c6e81c1a088bd5a8008377f6f032066eec7fae43178778b05921f2aba05', now(), '20261012180000_v4_notifications_customers', 1);
 
 -- ════════ 20261012200000_v5_trial_autoinvoice ════════
 -- AlterTable
@@ -427,7 +427,7 @@ ALTER TABLE "Client" ADD COLUMN     "serviceStartAt" TIMESTAMP(3),
 ADD COLUMN     "trialWeeks" INTEGER NOT NULL DEFAULT 0;
 
 INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
-VALUES ('8f8cfdca-a196-4a5f-8d73-9176048a6b50', 'fe21962bea31e1033a6bc9057e01b9ad6e98ac62f13769be29548cb8e78f518d', now(), '20261012200000_v5_trial_autoinvoice', 1);
+VALUES ('20432a7d-8882-4167-9507-1b2b7bcb9fb6', 'fe21962bea31e1033a6bc9057e01b9ad6e98ac62f13769be29548cb8e78f518d', now(), '20261012200000_v5_trial_autoinvoice', 1);
 
 -- ════════ 20261013090000_v6_product_validation ════════
 -- AlterTable
@@ -441,4 +441,90 @@ ADD COLUMN     "validatedBy" TEXT;
 UPDATE "Product" SET "validatedAt" = now(), "validatedBy" = 'Migración' WHERE "validatedAt" IS NULL;
 
 INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
-VALUES ('5c37c566-985d-4d0a-9797-a573efc2050f', '3c3981eab56c03c7c7c9c55031c0871401ed6cd441e4d0c066225c7e6285e0f6', now(), '20261013090000_v6_product_validation', 1);
+VALUES ('ed4c2a03-6c2d-436f-b839-40600a2aa556', '3c3981eab56c03c7c7c9c55031c0871401ed6cd441e4d0c066225c7e6285e0f6', now(), '20261013090000_v6_product_validation', 1);
+
+-- ════════ 20261014090000_v7_plans ════════
+-- AlterTable
+ALTER TABLE "Client" ADD COLUMN     "serviceEndAt" TIMESTAMP(3);
+
+-- CreateTable
+CREATE TABLE "PlanConfig" (
+    "key" TEXT NOT NULL,
+    "label" TEXT NOT NULL,
+    "orders" INTEGER NOT NULL,
+    "feeCents" INTEGER NOT NULL,
+    "extraCents" INTEGER NOT NULL,
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "active" BOOLEAN NOT NULL DEFAULT true,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "PlanConfig_pkey" PRIMARY KEY ("key")
+);
+
+-- CreateTable
+CREATE TABLE "PlanChange" (
+    "id" TEXT NOT NULL,
+    "clientId" TEXT NOT NULL,
+    "effectiveAt" TIMESTAMP(3) NOT NULL,
+    "fromPlan" TEXT NOT NULL,
+    "fromOrders" INTEGER NOT NULL,
+    "fromFeeCents" INTEGER NOT NULL,
+    "fromExtraCents" INTEGER NOT NULL,
+    "toPlan" TEXT NOT NULL,
+    "toOrders" INTEGER NOT NULL,
+    "toFeeCents" INTEGER NOT NULL,
+    "toExtraCents" INTEGER NOT NULL,
+    "source" TEXT NOT NULL,
+    "createdBy" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "PlanChange_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PlanRequest" (
+    "id" TEXT NOT NULL,
+    "clientId" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "plan" TEXT,
+    "orders" INTEGER,
+    "feeCents" INTEGER,
+    "extraCents" INTEGER,
+    "effectiveAt" TIMESTAMP(3) NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'PENDING',
+    "note" TEXT,
+    "createdBy" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "resolvedAt" TIMESTAMP(3),
+    "resolvedBy" TEXT,
+
+    CONSTRAINT "PlanRequest_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE INDEX "PlanChange_clientId_effectiveAt_idx" ON "PlanChange"("clientId", "effectiveAt");
+
+-- CreateIndex
+CREATE INDEX "PlanRequest_status_effectiveAt_idx" ON "PlanRequest"("status", "effectiveAt");
+
+-- AddForeignKey
+ALTER TABLE "PlanChange" ADD CONSTRAINT "PlanChange_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "Client"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PlanRequest" ADD CONSTRAINT "PlanRequest_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "Client"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+
+-- Planes por defecto (editables en Ajustes)
+INSERT INTO "PlanConfig" ("key", "label", "orders", "feeCents", "extraCents", "sortOrder", "updatedAt") VALUES
+  ('ARRANQUE', 'Arranque', 300, 48000, 140, 1, now()),
+  ('CRECIMIENTO', 'Crecimiento', 600, 85000, 130, 2, now()),
+  ('ESCALA', 'Escala', 1000, 120000, 120, 3, now())
+ON CONFLICT ("key") DO NOTHING;
+
+-- Supabase: sin acceso por la API pública (la app usa la conexión directa)
+ALTER TABLE "PlanConfig" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "PlanChange" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "PlanRequest" ENABLE ROW LEVEL SECURITY;
+
+INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
+VALUES ('9611d8be-e4c2-475a-a8ee-8c275e5fdef1', '8510c44bd1b6e741991049e12b820e37fe0db0d65ee19342fe39f6a92566c344', now(), '20261014090000_v7_plans', 1);

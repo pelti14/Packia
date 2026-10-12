@@ -3,13 +3,13 @@
 import { useActionState } from "react";
 import { UserPlus } from "lucide-react";
 import { createClient, type FormState } from "@/app/actions";
-import { PLANS } from "@/lib/types";
+import type { PlanOption } from "@/lib/plans";
 import { SubmitButton } from "@/components/submit-button";
 import { Notice } from "@/components/ui";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-export function NewClientForm() {
+export function NewClientForm({ plans }: { plans: PlanOption[] }) {
   const [state, action] = useActionState<FormState, FormData>(createClient, undefined);
   const v = state?.values ?? {};
   return (
@@ -25,8 +25,8 @@ export function NewClientForm() {
       <div>
         <label className="label" htmlFor="plan">Plan</label>
         <select id="plan" name="plan" className="input" defaultValue={v.plan || "ARRANQUE"}>
-          {Object.entries(PLANS).map(([key, p]) => (
-            <option key={key} value={key}>{p.label} · hasta {p.orders} pedidos/mes</option>
+          {plans.map((p) => (
+            <option key={p.plan} value={p.plan}>{p.label} · hasta {p.orders} pedidos/mes · {(p.feeCents / 100).toLocaleString("es-ES")} €</option>
           ))}
         </select>
       </div>

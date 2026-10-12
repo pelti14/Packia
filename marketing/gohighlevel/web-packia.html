@@ -221,9 +221,9 @@
 <section id="precios" style="background:#fff"><div class="wrap">
   <div class="center"><span class="eyebrow">Precios</span><h2 style="margin-top:14px">Cuota fija. Sin letra pequeña.</h2><p class="lead">Recepción, almacenaje, preparación, embalaje y panel incluidos. El transporte se factura aparte a tarifa reducida.</p></div>
   <div class="plans">
-    <div class="glass plan"><h3>Arranque</h3><div class="price">480 €<small> /mes + IVA</small></div><p>Hasta 300 pedidos al mes</p><ul><li>Pedido extra a 1,40 €</li><li>Hasta 50 referencias</li><li>Panel y soporte por WhatsApp</li></ul><a href="#contacto" class="btn btn-g">Empezar</a></div>
-    <div class="glass plan hot"><span class="badge">El más elegido</span><h3>Crecimiento</h3><div class="price">850 €<small> /mes + IVA</small></div><p>Hasta 600 pedidos al mes</p><ul><li>Pedido extra a 1,30 €</li><li>Hasta 100 referencias</li><li>Empaquetado personalizado</li><li>Informe mensual</li></ul><a href="#contacto" class="btn btn-p">Empezar</a></div>
-    <div class="glass plan"><h3>Escala</h3><div class="price">1.200 €<small> /mes + IVA</small></div><p>Hasta 1.000 pedidos al mes</p><ul><li>Pedido extra a 1,20 €</li><li>Referencias a medida</li><li>Gestor dedicado</li></ul><a href="#contacto" class="btn btn-g">Hablemos</a></div>
+    <div class="glass plan"><h3 data-pk="ARRANQUE.label">Arranque</h3><div class="price"><span data-pk="ARRANQUE.fee">480</span> €<small> /mes + IVA</small></div><p>Hasta <span data-pk="ARRANQUE.orders">300</span> pedidos al mes</p><ul><li>Pedido extra a <span data-pk="ARRANQUE.extra">1,40</span> €</li><li>Hasta 50 referencias</li><li>Panel y soporte por WhatsApp</li></ul><a href="#contacto" class="btn btn-g">Empezar</a></div>
+    <div class="glass plan hot"><span class="badge">El más elegido</span><h3 data-pk="CRECIMIENTO.label">Crecimiento</h3><div class="price"><span data-pk="CRECIMIENTO.fee">850</span> €<small> /mes + IVA</small></div><p>Hasta <span data-pk="CRECIMIENTO.orders">600</span> pedidos al mes</p><ul><li>Pedido extra a <span data-pk="CRECIMIENTO.extra">1,30</span> €</li><li>Hasta 100 referencias</li><li>Empaquetado personalizado</li><li>Informe mensual</li></ul><a href="#contacto" class="btn btn-p">Empezar</a></div>
+    <div class="glass plan"><h3 data-pk="ESCALA.label">Escala</h3><div class="price"><span data-pk="ESCALA.fee">1.200</span> €<small> /mes + IVA</small></div><p>Hasta <span data-pk="ESCALA.orders">1.000</span> pedidos al mes</p><ul><li>Pedido extra a <span data-pk="ESCALA.extra">1,20</span> €</li><li>Referencias a medida</li><li>Gestor dedicado</li></ul><a href="#contacto" class="btn btn-g">Hablemos</a></div>
   </div>
   <p class="note">Sin permanencia · 2 semanas de prueba · El primer mes se cobra solo por los días de servicio.</p>
 </div></section>
@@ -267,6 +267,23 @@
 </div></footer>
 <div class="mcta"><a href="#contacto" class="btn btn-p">Pedir propuesta</a><a href="https://wa.me/34600000000?text=Hola%2C%20tengo%20una%20tienda%20online%20y%20quiero%20informaci%C3%B3n%20sobre%20Packia" class="btn btn-w">WhatsApp</a></div>
 </div>
+<script>
+/* Precios en directo desde Packia (Ajustes → Planes y precios). Si no responde, se quedan los de arriba. */
+(function(){
+  var URL_PACKIA="https://floralwhite-dugong-101545.hostingersite.com";
+  if(!URL_PACKIA||URL_PACKIA.indexOf("{{")===0)return;
+  var fmt=function(n,dec){return n.toLocaleString("es-ES",{minimumFractionDigits:dec,maximumFractionDigits:dec})};
+  fetch(URL_PACKIA.replace(/\/+$/,"")+"/api/public/planes").then(function(r){return r.json()}).then(function(d){
+    var min=null;
+    (d.plans||[]).forEach(function(p){
+      min=min===null?p.fee:Math.min(min,p.fee);
+      var set=function(field,val){document.querySelectorAll('[data-pk="'+p.key+'.'+field+'"]').forEach(function(el){el.textContent=val})};
+      set("label",p.label);set("fee",fmt(p.fee,p.fee%1?2:0));set("orders",fmt(p.orders,0));set("extra",fmt(p.extra,2));
+    });
+    if(min!==null)document.querySelectorAll('[data-pk="min.fee"]').forEach(function(el){el.textContent=fmt(min,min%1?2:0)});
+  }).catch(function(){});
+})();
+</script>
 
 <!-- ▲▲▲ COPIAR HASTA AQUÍ ▲▲▲ -->
 </body>

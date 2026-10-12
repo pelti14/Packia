@@ -11,7 +11,10 @@ import { createLabel, estimateWeight, listShippingMethods, type LabelRequest } f
 import { registerShopifyWebhooks, shipOrder, syncStore, testStoreConnection } from "@/lib/sync";
 import { getAppUrl } from "@/lib/app-url";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
-import { CARRIERS, ORDER_FLOW, PLANS, RETURN_FEE_CENTS, type OrderStatus, type Plan } from "@/lib/types";
+import { CARRIERS, ORDER_FLOW, RETURN_FEE_CENTS, type OrderStatus } from "@/lib/types";
+import { changeTerms, clientTerms, getPlans, nextMonthStart, sameTerms } from "@/lib/plans";
+import { startOfDay, startOfMonth } from "@/lib/schedule";
+import { formatDateOnly } from "@/lib/format";
 
 export type FormState = { error?: string; success?: string; values?: Record<string, string> } | undefined;
 
@@ -43,13 +46,13 @@ function parseTrialWeeks(v: string): number | null {
 export async function createClient(_: FormState, form: FormData): Promise<FormState> {
   await assertRole(["ADMIN"]);
   const name = str(form.get("name"));
-  const plan = (str(form.get("plan")) || "ARRANQUE") as Plan;
+  const plan = str(form.get("plan")) || "ARRANQUE";
   const values = keep(form, ["name", "contactEmail", "plan", "serviceStartAt", "trialWeeks"]);
   if (!name) return { error: "El nombre es obligatorio", values };
-  if (!(plan in PLANS)) return { error: "Plan no válido", values };
+  const p = (await getPlans()).find((x) => x.plan === plan);
+  if (!p) return { error: "Plan no válido", values };
   const trialWeeks = parseTrialWeeks(values.trialWeeks);
   if (trialWeeks === null) return { error: "Semanas de prueba no válidas (0 a 26)", values };
-  const p = PLANS[plan];
   await db.client.create({
     data: {
       name,
@@ -68,15 +71,15 @@ export async function createClient(_: FormState, form: FormData): Promise<FormSt
 }
 
 export async function updateClient(clientId: string, _: FormState, form: FormData): Promise<FormState> {
-  await assertRole(["ADMIN"]);
-  const fields = ["name", "contactEmail", "taxId", "billingAddress", "plan", "planOrders", "monthlyFee", "extraOrderFee", "returnFee", "serviceStartAt", "trialWeeks"];
+  const admin = await assertRole(["ADMIN"]);
+  const fields = ["name", "contactEmail", "taxId", "billingAddress", "plan", "planOrders", "monthlyFee", "extraOrderFee", "returnFee", "serviceStartAt", "trialWeeks", "planEffective"];
   const values = keep(form, fields);
   const planOrders = Number(values.planOrders);
   const monthlyFeeCents = cents(values.monthlyFee);
   const extraOrderFeeCents = cents(values.extraOrderFee);
   const returnFeeCents = cents(values.returnFee);
   if (!values.name) return { error: "El nombre es obligatorio", values };
-  if (!(values.plan in PLANS)) return { error: "Plan no válido", values };
+  if (!(await getPlans()).some((x) => x.plan === values.plan)) return { error: "Plan no válido", values };
   if (!Number.isInteger(planOrders) || planOrders < 0) return { error: "Pedidos incluidos no válidos", values };
   if (monthlyFeeCents === null || extraOrderFeeCents === null || returnFeeCents === null) return { error: "Revisa los importes", values };
   const trialWeeks = parseTrialWeeks(values.trialWeeks);
@@ -91,17 +94,29 @@ export async function updateClient(clientId: string, _: FormState, form: FormDat
       contactEmail: values.contactEmail || null,
       taxId: values.taxId || null,
       billingAddress: values.billingAddress || null,
-      plan: values.plan,
-      planOrders,
-      monthlyFeeCents,
-      extraOrderFeeCents,
       returnFeeCents,
       trialWeeks,
       serviceStartAt,
     },
   });
+
+  // Plan y precios: se guardan en el historial para prorratear la factura por días.
+  const terms = { plan: values.plan, orders: planOrders, feeCents: monthlyFeeCents, extraCents: extraOrderFeeCents };
+  const by = admin.name || admin.email;
+  let success = "Cliente actualizado";
+  if (values.planEffective === "next") {
+    const current = await db.client.findUniqueOrThrow({ where: { id: clientId } });
+    if (!sameTerms(clientTerms(current), terms)) {
+      await db.planRequest.updateMany({ where: { clientId, status: "PENDING", type: { in: ["CHANGE", "DOWNGRADE"] } }, data: { status: "WITHDRAWN", resolvedAt: new Date(), resolvedBy: by } });
+      await db.planRequest.create({ data: { clientId, type: "CHANGE", plan: terms.plan, orders: terms.orders, feeCents: terms.feeCents, extraCents: terms.extraCents, effectiveAt: nextMonthStart(), createdBy: by } });
+      success = `Cliente actualizado. El cambio de plan se aplicará el ${formatDateOnly(nextMonthStart())}`;
+    }
+  } else {
+    const effectiveAt = values.planEffective === "month" ? startOfMonth() : startOfDay();
+    if (await changeTerms(clientId, terms, effectiveAt, "ADMIN", by)) success = values.planEffective === "month" ? "Cliente actualizado. Nuevo plan para todo este mes" : "Cliente actualizado. Nuevo plan desde hoy, prorrateado por días";
+  }
   revalidatePath("/", "layout");
-  return { success: "Cliente actualizado", values };
+  return { success, values };
 }
 
 /** Envíos del cliente: repartidor por defecto y cuenta de Sendcloud propia (opcional). */

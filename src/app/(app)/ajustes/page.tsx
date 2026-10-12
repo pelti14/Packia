@@ -5,14 +5,19 @@ import { Card, CardHeader, Notice, PageHeader } from "@/components/ui";
 import { StatusList } from "@/components/status-list";
 import { MigrateForm } from "@/app/setup/forms";
 import { SettingsForm } from "./settings-form";
+import { PlansForm } from "./plans-form";
+import { getPlans } from "@/lib/plans";
+import { getAppUrl } from "@/lib/app-url";
 
 export default async function AjustesPage({ searchParams }: { searchParams: Promise<{ bienvenida?: string }> }) {
   await requireUser(["ADMIN"]);
   const { bienvenida } = await searchParams;
-  const [settings, checks, pending] = await Promise.all([
+  const [settings, checks, pending, plans, appUrl] = await Promise.all([
     db.appSettings.findUnique({ where: { id: "default" } }),
     systemStatus(),
     pendingMigrations(),
+    getPlans(),
+    getAppUrl(),
   ]);
 
   const initial: Record<string, string> = {};
@@ -35,6 +40,7 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
       <div className="grid items-start gap-6 2xl:grid-cols-3">
         <div className="2xl:col-span-2">
           <SettingsForm initial={initial} sendcloudSaved={Boolean(settings?.sendcloudPublicKey && settings?.sendcloudSecretKey)} autoInvoice={settings?.autoInvoice ?? true} />
+          <div className="mt-6"><PlansForm plans={plans} publicUrl={`${appUrl}/api/public/planes`} /></div>
         </div>
         <Card>
           <CardHeader title="Estado del sistema" />

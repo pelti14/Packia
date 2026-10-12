@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, Clock3, PackageCheck, PackagePlus, Send, Siren, Target } from "lucide-react";
 import { db } from "@/lib/db";
+import { monthlyIncluded } from "@/lib/plans";
 import { clientScope, isStaff, requireUser } from "@/lib/auth";
 import { formatDateOnly, formatDay, timeAgo, units } from "@/lib/format";
 import { addDays, dayKey, shippedOnTime, startOfDay, startOfMonth, urgency } from "@/lib/schedule";
@@ -32,6 +33,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     db.inbound.findMany({ where: { ...scope, status: "EXPECTED" }, include: { client: true, items: true }, orderBy: { expectedAt: "asc" }, take: 4 }),
   ]);
 
+  const quotaOf = new Map(await Promise.all(clients.map(async (c) => [c.id, await monthlyIncluded(c)] as const)));
   const dueNow = openOrders.filter((o) => urgency(o.placedAt) !== "LATER");
   const overdue = openOrders.filter((o) => urgency(o.placedAt) === "OVERDUE").length;
   const onTime = recentShipped.filter((o) => o.shippedAt && shippedOnTime(o.placedAt, o.shippedAt)).length;
@@ -109,14 +111,15 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           <div className="space-y-5 px-5 py-5">
             {clients.map((c) => {
               const used = c._count.orders;
-              const pct = Math.min(100, Math.round((used / Math.max(1, c.planOrders)) * 100));
-              const over = used > c.planOrders;
+              const quota = quotaOf.get(c.id) ?? c.planOrders;
+              const pct = Math.min(100, Math.round((used / Math.max(1, quota)) * 100));
+              const over = used > quota;
               return (
                 <div key={c.id}>
                   <div className="flex items-baseline justify-between text-sm">
                     <span className="font-medium text-ink-900">{c.name}</span>
                     <span className="mono text-ink-500">
-                      <b className={over ? "text-amber-600" : "text-ink-900"}>{used}</b> / {c.planOrders}
+                      <b className={over ? "text-amber-600" : "text-ink-900"}>{used}</b> / {quota}
                     </span>
                   </div>
                   <div className="mt-2 h-2 overflow-hidden rounded-full bg-line/70">
@@ -125,7 +128,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                       style={{ width: `${pct}%` }}
                     />
                   </div>
-                  {over && <div className="mt-1 text-[11px] text-amber-600">{used - c.planOrders} pedidos por encima del plan</div>}
+                  {over && <div className="mt-1 text-[11px] text-amber-600">{used - quota} pedidos por encima del plan</div>}
                 </div>
               );
             })}

@@ -8,7 +8,8 @@ import {
 } from "lucide-react";
 import { PickList, type PickItem } from "@/components/pick-list";
 import { Pill, StatusBadge, PlatformBadge } from "@/components/ui";
-import { PLANS, RETURN_FEE_CENTS, type OrderStatus } from "@/lib/types";
+import { RETURN_FEE_CENTS, type OrderStatus } from "@/lib/types";
+import type { PlanOption } from "@/lib/plans";
 
 /* ───────────── Datos ficticios ───────────── */
 
@@ -55,7 +56,7 @@ type Viewer = "equipo" | "cliente";
 
 /* ───────────── App ───────────── */
 
-export function DemoApp() {
+export function DemoApp({ plans }: { plans: PlanOption[] }) {
   const [s, setS] = useState<State>(initial);
   const [view, setView] = useState<View>("panel");
   const [viewer, setViewer] = useState<Viewer>("equipo");
@@ -321,7 +322,7 @@ export function DemoApp() {
             </Section>
           )}
 
-          {view === "facturacion" && <Billing shipped={s.orders.filter((o) => o.status === "SHIPPED").length} returns={s.returns.length} />}
+          {view === "facturacion" && <Billing plans={plans} shipped={s.orders.filter((o) => o.status === "SHIPPED").length} returns={s.returns.length} />}
         </div>
       </div>
 
@@ -527,9 +528,9 @@ function Inventory({ s, staff, validating, setValidating, onValidate }: {
 
 const eur = (cents: number) => new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(cents / 100);
 
-function Billing({ shipped, returns }: { shipped: number; returns: number }) {
+function Billing({ plans, shipped, returns }: { plans: PlanOption[]; shipped: number; returns: number }) {
   // Ejemplo: alta el día 6 con 2 semanas de prueba → se factura desde el 20 (12 de 31 días).
-  const plan = PLANS.ARRANQUE;
+  const plan = plans[0];
   const days = 31;
   const billable = 12;
   const fee = Math.round((plan.feeCents * billable) / days);

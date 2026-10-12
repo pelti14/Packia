@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { canAccessClient, requireUser } from "@/lib/auth";
-import { issuer } from "@/lib/billing";
+import { invoicePeriodLabel, issuer } from "@/lib/billing";
 import { eur, formatDateOnly, formatMonth } from "@/lib/format";
 import { BackLink, Pill } from "@/components/ui";
 import { LogoMark } from "@/components/logo";
@@ -36,7 +36,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Factura</div>
             <div className="mono mt-1 text-2xl font-bold text-ink-900">{invoice.number}</div>
             <div className="mt-2 text-sm text-ink-500">Fecha: {formatDateOnly(invoice.issuedAt)}</div>
-            <div className="text-sm text-ink-500">Periodo: {formatMonth(invoice.periodStart)}</div>
+            <div className="text-sm text-ink-500">Periodo: {invoicePeriodLabel(invoice)}</div>
             <div className="mt-2 print:hidden"><Pill tone={invoice.status === "PAID" ? "mint" : "amber"}>{invoice.status === "PAID" ? "Pagada" : "Pendiente de pago"}</Pill></div>
           </div>
         </header>
