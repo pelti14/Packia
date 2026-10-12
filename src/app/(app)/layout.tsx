@@ -7,6 +7,7 @@ import { MobileNav, Sidebar } from "@/components/sidebar";
 import { CutoffClock } from "@/components/cutoff-clock";
 import { pendingMigrations } from "@/lib/setup";
 import { UpdateScreen } from "@/components/update-screen";
+import { PrintToast } from "@/components/print-toast";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <main className="relative z-10 flex-1 px-4 pb-28 pt-8 print:p-0 sm:px-8 lg:px-10 lg:pb-12">{children}</main>
       </div>
       <MobileNav role={user.role} />
+      <PrintToast />
     </div>
     </NotificationsProvider>
   );

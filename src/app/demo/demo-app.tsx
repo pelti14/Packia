@@ -7,6 +7,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { PickList, type PickItem } from "@/components/pick-list";
+import { printLabel } from "@/components/print-toast";
 import { Pill, StatusBadge, PlatformBadge } from "@/components/ui";
 import { RETURN_FEE_CENTS, type OrderStatus } from "@/lib/types";
 import type { PlanOption } from "@/lib/plans";
@@ -217,7 +218,7 @@ export function DemoApp({ plans, printOnPack }: { plans: PlanOption[]; printOnPa
                 // Igual que en la app: con «imprimir al embalar», sale la etiqueta de este pedido al momento.
                 if (printOnPack) {
                   const q = new URLSearchParams({ order: order.number, carrier: order.carrier, client: CLIENT, units: String(order.items.reduce((a, i) => a + i.quantity, 0)) });
-                  window.open(`/demo/etiqueta?${q}`, "_blank");
+                  printLabel(`/demo/etiqueta?${q}`, `Etiqueta ${order.number}`);
                 }
                 const tracking = `PK${Date.now().toString(36).toUpperCase().slice(-8)}`;
                 update(

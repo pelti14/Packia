@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { Logo } from "@/components/logo";
+import { PrintToast } from "@/components/print-toast";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Demo" };
@@ -19,6 +20,7 @@ export default async function DemoLayout({ children }: { children: React.ReactNo
         <div className="relative px-4 pb-16 pt-6 sm:px-8 lg:px-10">
           <div className="mb-6"><Logo /></div>
           {children}
+          <PrintToast />
         </div>
       </div>
     </div>

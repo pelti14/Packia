@@ -34,7 +34,8 @@ export async function GET(req: Request) {
       });
     }),
   );
-  const pdf = await layoutLabels(labels, await getPrintSettings());
+  const settings = await getPrintSettings();
+  const pdf = await layoutLabels(labels, { ...settings, autoDialog: settings.autoDialog && q.get("embed") !== "1" });
   return new NextResponse(Buffer.from(pdf), {
     headers: { "Content-Type": "application/pdf", "Content-Disposition": `inline; filename="etiquetas-demo-${orders.length}.pdf"`, "Cache-Control": "no-store" },
   });

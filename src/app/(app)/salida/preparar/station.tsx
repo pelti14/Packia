@@ -7,7 +7,7 @@ import { labelAndShip, packOrder, revertOrder, type FormState } from "@/app/acti
 import { SubmitButton } from "@/components/submit-button";
 import { Notice } from "@/components/ui";
 import { PickList } from "@/components/pick-list";
-import { usePrintWindow } from "@/components/print-window";
+import { printLabel } from "@/components/print-toast";
 
 type Item = { id: string; sku: string; name: string; quantity: number; location: string | null; stock: number | null; barcode: string | null };
 type Option = { value: string; label: string; group: string };
@@ -24,7 +24,6 @@ export function Station(props: {
   printOnPack: boolean;
 }) {
   const { order, items, options, defaultValue, weight, nextHref, prevHref, blocked, printOnPack } = props;
-  const printWin = usePrintWindow(printOnPack);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const packed = order.status === "PACKED";
@@ -33,8 +32,7 @@ export function Station(props: {
   const [state, shipAction] = useActionState<FormState, FormData>(async (prev, form) => {
     const r = await labelAndShip(order.id, prev, form);
     const ok = r?.success || r?.error?.startsWith("Etiqueta creada");
-    if (ok) printWin.go(`/api/labels/${order.id}`);
-    else printWin.cancel();
+    if (ok && form.get("printNow") === "on") printLabel(`/api/labels/${order.id}`, `Etiqueta ${order.number}`);
     if (ok) {
       router.push(`${nextHref}${nextHref.includes("?") ? "&" : "?"}etiqueta=${order.id}`);
     }
@@ -80,7 +78,7 @@ export function Station(props: {
           {packError && <Notice tone="error">{packError}</Notice>}
           {!packed && <p className="text-center text-xs text-ink-400">Toca o escanea cada producto al cogerlo para ir marcándolo.</p>}
 
-          <form action={shipAction} onSubmit={printWin.open} className={blocked ? "pointer-events-none space-y-3 rounded-2xl border border-line bg-white/60 p-4 opacity-50" : "space-y-3 rounded-2xl border border-line bg-white/60 p-4"}>
+          <form action={shipAction} className={blocked ? "pointer-events-none space-y-3 rounded-2xl border border-line bg-white/60 p-4 opacity-50" : "space-y-3 rounded-2xl border border-line bg-white/60 p-4"}>
             <div className="text-sm font-semibold text-ink-900">{packed ? "Crear etiqueta y enviar" : "O embalar y crear la etiqueta ya"}</div>
             <select name="method" defaultValue={defaultValue} className="input" aria-label="Envío">
               {[...new Set(options.map((o) => o.group))].map((g) => (
@@ -95,9 +93,13 @@ export function Station(props: {
               <input name="weight" type="number" min={1} defaultValue={weight} className="input mono" aria-label="Peso en gramos" />
               <span className="text-sm text-ink-500">g</span>
             </div>
+            <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-ink-700">
+              <input type="checkbox" name="printNow" defaultChecked={printOnPack} className="h-5 w-5 accent-brand-500" />
+              Imprimir la etiqueta al terminar
+            </label>
             {state?.error && <Notice tone="error">{state.error}</Notice>}
             <SubmitButton variant={packed ? "primary" : "ghost"} className="w-full">
-              <Printer className="h-4 w-4" /> {printOnPack ? "Imprimir etiqueta y enviar · siguiente" : "Etiqueta y enviar · siguiente"}
+              <Printer className="h-4 w-4" /> Etiqueta y enviar · siguiente
             </SubmitButton>
           </form>
 

@@ -57,7 +57,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ orderId:
 
   try {
     const files = await Promise.all(allowed.map(labelPdf));
-    const pdf = await layoutLabels(files, { ...settings, autoDialog: settings.autoDialog && sp.get("preview") !== "1" });
+    const pdf = await layoutLabels(files, { ...settings, autoDialog: settings.autoDialog && sp.get("preview") !== "1" && sp.get("embed") !== "1" });
     if (sp.get("preview") !== "1" && isStaff(user)) {
       await db.order.updateMany({ where: { id: { in: allowed.map((o) => o.id) } }, data: { labelPrintedAt: new Date(), labelPrintCount: { increment: 1 } } });
     }

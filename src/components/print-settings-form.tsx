@@ -54,7 +54,7 @@ export function PrintSettingsForm({ initial }: { initial: PrintSettingsValues })
         <input type="checkbox" name="printOnPack" defaultChecked={checked("printOnPack")} className="mt-0.5 h-5 w-5 accent-brand-500" />
         <span>
           <b className="text-ink-900">Imprimir cada etiqueta al embalar (recomendado)</b>
-          <span className="block text-xs text-ink-500">Al pulsar «Etiqueta y enviar» sale la etiqueta de ESE pedido y se pega en su caja en el momento: imposible confundirlas. Si lo desactivas, se acumulan en «Por imprimir» para imprimirlas en bloque.</span>
+          <span className="block text-xs text-ink-500">La casilla «Imprimir la etiqueta al terminar» sale marcada: al pulsar «Etiqueta y enviar» la etiqueta de ESE pedido se manda a la impresora sin abrir pestañas, aparece un recuadro pequeño para verla o reimprimirla y se pasa al siguiente pedido. Si lo desactivas, se acumulan en «Por imprimir».</span>
         </span>
       </label>
       <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink-700">
@@ -77,6 +77,16 @@ export function PrintSettingsForm({ initial }: { initial: PrintSettingsValues })
         </ol>
         El navegador lo recuerda para la próxima vez. Si aún queda desplazada, corrige con «Mover» (mm) y repite la prueba.
       </div>
+      <details className="rounded-xl bg-ink-900 p-4 text-xs leading-relaxed text-white/80">
+        <summary className="cursor-pointer text-sm font-semibold text-white">Imprimir sin que salga ninguna ventana (ordenador de embalaje)</summary>
+        <p className="mt-2">Chrome siempre pregunta antes de imprimir, salvo en modo <b className="text-brand-400">impresión directa</b>. Así, cada etiqueta sale sola por la impresora predeterminada:</p>
+        <ol className="mt-2 list-decimal space-y-1 pl-4">
+          <li>En Windows → Impresoras, pon la de etiquetas como <b>predeterminada</b> y en sus preferencias el papel <b>100 × 150 mm</b>.</li>
+          <li>Crea un acceso directo de Chrome y en <b>Destino</b> añade al final: <code className="rounded bg-white/10 px-1 text-brand-400">--kiosk-printing</code></li>
+          <li>Cierra todas las ventanas de Chrome y ábrelo siempre desde ese acceso directo en ese ordenador.</li>
+        </ol>
+        <p className="mt-2">En Mac (Terminal): <code className="rounded bg-white/10 px-1 text-brand-400">open -a &quot;Google Chrome&quot; --args --kiosk-printing</code>. En Edge funciona igual.</p>
+      </details>
     </form>
   );
 }

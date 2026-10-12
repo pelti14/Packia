@@ -28,7 +28,7 @@ export default async function PrepararPage({ searchParams }: { searchParams: Pro
     .sort((a, b) => RANK[urgency(a.placedAt)] - RANK[urgency(b.placedAt)] || a.placedAt.getTime() - b.placedAt.getTime());
 
   const base = `/salida/preparar?clients=${clientIds.join(",")}${hoy ? "&hoy=1" : ""}`;
-  const shippedLabel = etiqueta ? await db.order.findUnique({ where: { id: etiqueta }, select: { id: true, number: true, labelProvider: true, status: true } }) : null;
+  const shippedLabel = etiqueta ? await db.order.findUnique({ where: { id: etiqueta }, select: { id: true, number: true, labelProvider: true, status: true, labelPrintedAt: true } }) : null;
 
   const printSettings = await getPrintSettings();
   const toPrint = shippedLabel ? await db.order.count({ where: { status: "SHIPPED", labelProvider: { in: ["PACKIA", "SENDCLOUD"] }, labelPrintedAt: null } }) : 0;
@@ -38,8 +38,8 @@ export default async function PrepararPage({ searchParams }: { searchParams: Pro
         <div className="flex flex-wrap items-center justify-between gap-3">
           {printSettings.printOnPack ? (
             <>
-              <span>Pedido <b className="mono">{shippedLabel.number}</b> enviado. Su etiqueta se ha abierto para imprimir: pégala ya en su caja.</span>
-              <a href={`/api/labels/${shippedLabel.id}`} target="_blank" className="btn-ghost py-2"><Printer className="h-4 w-4" /> ¿No ha salido? Imprimir otra vez</a>
+              <span>Pedido <b className="mono">{shippedLabel.number}</b> enviado.{shippedLabel.labelPrintedAt ? " Etiqueta enviada a la impresora: pégala en su caja." : " Su etiqueta está en «Por imprimir»."}</span>
+              <a href={`/api/labels/${shippedLabel.id}`} target="_blank" className="btn-ghost py-2"><Printer className="h-4 w-4" /> Ver / reimprimir</a>
             </>
           ) : (
             <>
