@@ -1,14 +1,8 @@
+import { getSettings } from "@/lib/settings";
+
 /** Datos del remitente (nuestro almacén) que aparecen en las etiquetas. */
-export function sender() {
-  return {
-    name: process.env.SENDER_NAME ?? "Packia Fulfillment",
-    address: process.env.SENDER_ADDRESS ?? "",
-    city: process.env.SENDER_CITY ?? "",
-    zip: process.env.SENDER_ZIP ?? "",
-    country: process.env.SENDER_COUNTRY ?? "ES",
-    phone: process.env.SENDER_PHONE ?? "",
-    email: process.env.SENDER_EMAIL ?? "",
-  };
+export async function sender() {
+  return (await getSettings()).sender;
 }
 
 const COUNTRY_CODES: Record<string, string> = {

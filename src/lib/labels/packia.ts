@@ -51,7 +51,7 @@ export async function renderInternalLabel(data: LabelData): Promise<Uint8Array> 
   rule(y);
 
   // Remitente
-  const s = sender();
+  const s = await sender();
   y -= 12;
   text("REMITENTE", m, y, 7, bold);
   y -= 10;

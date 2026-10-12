@@ -1,9 +1,14 @@
 import { Boxes, PackageCheck, Truck } from "lucide-react";
+import { redirect } from "next/navigation";
 import { Logo, LogoMark } from "@/components/logo";
+import { needsSetup } from "@/lib/setup";
 import { LoginForm } from "./login-form";
+
+export const dynamic = "force-dynamic";
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string; error?: string }> }) {
   const { next, error } = await searchParams;
+  if (await needsSetup()) redirect("/setup");
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       <div className="relative hidden overflow-hidden bg-gradient-to-br from-brand-600 via-brand-500 to-aqua-500 p-12 text-white lg:flex lg:flex-col">

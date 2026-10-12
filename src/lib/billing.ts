@@ -1,5 +1,6 @@
 import type { Client } from "@prisma/client";
 import { db } from "@/lib/db";
+import { getSettings } from "@/lib/settings";
 import { monthRange } from "@/lib/schedule";
 import { PLANS, type Plan } from "@/lib/types";
 
@@ -76,12 +77,6 @@ export async function issueInvoice(clientId: string, month: string) {
 }
 
 /** Datos fiscales de Packia para la factura. */
-export function issuer() {
-  return {
-    name: process.env.COMPANY_NAME ?? "Packia Fulfillment",
-    taxId: process.env.COMPANY_TAX_ID ?? "",
-    address: process.env.COMPANY_ADDRESS ?? "",
-    email: process.env.COMPANY_EMAIL ?? "",
-    iban: process.env.COMPANY_IBAN ?? "",
-  };
+export async function issuer() {
+  return (await getSettings()).company;
 }

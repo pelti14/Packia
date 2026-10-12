@@ -239,3 +239,25 @@ model InvoiceLine {
   unitPriceCents Int
   amountCents    Int
 }
+
+/// Ajustes de la empresa editables desde la app (una sola fila, id = "default").
+model AppSettings {
+  id                 String   @id @default("default")
+  companyName        String?
+  companyTaxId       String?
+  companyAddress     String?
+  companyEmail       String?
+  companyIban        String?
+  senderName         String?
+  senderAddress      String?
+  senderCity         String?
+  senderZip          String?
+  senderCountry      String?
+  senderPhone        String?
+  senderEmail        String?
+  /// Cifrado (AES-256-GCM).
+  sendcloudPublicKey String?
+  /// Cifrado (AES-256-GCM).
+  sendcloudSecretKey String?
+  updatedAt          DateTime @updatedAt
+}

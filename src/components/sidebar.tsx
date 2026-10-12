@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
-import { Boxes, LayoutDashboard, LogOut, PackagePlus, Plug, Receipt, RotateCcw, ShieldCheck, Truck, Users, type LucideIcon } from "lucide-react";
+import { Boxes, LayoutDashboard, LogOut, PackagePlus, Plug, Receipt, RotateCcw, Settings, ShieldCheck, Truck, Users, type LucideIcon } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { signOut } from "@/app/auth-actions";
 import type { Role } from "@/lib/auth";
@@ -26,6 +26,7 @@ const BUSINESS: Item[] = [
   { href: "/clientes", label: "Clientes", icon: Users, roles: ["ADMIN", "STAFF"] },
   { href: "/tiendas", label: "Tiendas", icon: Plug, roles: ["ADMIN", "STAFF"] },
   { href: "/usuarios", label: "Usuarios", icon: ShieldCheck, roles: ["ADMIN"] },
+  { href: "/ajustes", label: "Ajustes", icon: Settings, roles: ["ADMIN"] },
 ];
 
 const isActive = (pathname: string, href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));

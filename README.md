@@ -18,6 +18,7 @@ Documentación de negocio en [`docs/`](docs/): [cliente ideal](docs/cliente-idea
 | **Clientes** | Plan y tarifas de cada cliente (cuota, pedidos incluidos, precio por pedido adicional y por devolución) y sus datos fiscales. |
 | **Tiendas** | Conexión con Shopify y WooCommerce, sincronización y webhooks. |
 | **Usuarios** | Alta de usuarios y roles. |
+| **Ajustes** | Datos fiscales, remitente de las etiquetas, claves de Sendcloud y estado del sistema (incluido el botón para actualizar la base de datos). |
 
 ### Roles
 
@@ -36,44 +37,32 @@ Documentación de negocio en [`docs/`](docs/): [cliente ideal](docs/cliente-idea
 
 - Login con **Supabase Auth**. Todas las páginas exigen sesión, menos `/login` y los webhooks. Cada acción del servidor comprueba el rol del usuario.
 - Los usuarios con rol Cliente solo pueden consultar los datos de su empresa.
-- Los tokens y claves de las tiendas se guardan **cifrados con AES-256-GCM** usando `ENCRYPTION_KEY`.
+- Los tokens y claves de las tiendas y de Sendcloud se guardan **cifrados con AES-256-GCM** usando `ENCRYPTION_KEY`.
+- El asistente `/setup` solo permite crear el primer administrador. Después queda bloqueado.
 - **RLS activado** en todas las tablas: la API pública de Supabase, que funciona con la clave anónima, no puede leer ni escribir nada. La app accede por Prisma.
 - Los webhooks se verifican con la firma HMAC de Shopify o WooCommerce.
 
-## Puesta en marcha con Supabase
+## Puesta en marcha
 
-### 1. Crear el proyecto
-1. Entra en [supabase.com](https://supabase.com) y crea un proyecto. Elige la región **EU (Frankfurt o Irlanda)** y guarda la contraseña de la base de datos.
-2. **Authentication → Providers → Email**: desactiva *Allow new users to sign up*. Los usuarios los crea un administrador desde Packia.
-3. **Authentication → URL Configuration**: pon en *Site URL* la URL de la app, por ejemplo `https://app.packia.es`, y añade `https://app.packia.es/auth/callback` en *Redirect URLs*.
+👉 **Guía completa paso a paso: [docs/puesta-en-marcha.md](docs/puesta-en-marcha.md)** (Supabase + Hostinger).
 
-### 2. Variables de entorno
-Copia `.env.example` a `.env` y rellénalo:
+En resumen:
+1. Crea un proyecto en Supabase y copia las **6 variables** de `.env.example`.
+2. Sube la app a tu hosting: en Hostinger, *Node.js Web App*, plan Business o Cloud. Añade las variables y despliega.
+3. Abre tu dominio. El **asistente `/setup`** comprueba la conexión, crea las tablas (con RLS) y tu usuario administrador.
+4. En **Ajustes** rellena los datos fiscales, el remitente y las claves de Sendcloud. Se guardan en la base de datos, no en el hosting.
 
-| Variable | Dónde está |
-| --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Project Settings → API |
-| `SUPABASE_SERVICE_ROLE_KEY` | Project Settings → API (**secreta**, solo servidor) |
-| `DATABASE_URL` | Project Settings → Database → Connection string → *Transaction pooler* (puerto 6543), añade `?pgbouncer=true` |
-| `DIRECT_URL` | Igual, pero *Session pooler* (puerto 5432) |
-| `ENCRYPTION_KEY` | `openssl rand -base64 32`. Guárdala bien: sin ella no se pueden leer las claves de las tiendas. |
-| `SENDCLOUD_*` | Sendcloud → Ajustes → Integraciones → Sendcloud API |
-| `SENDER_*`, `COMPANY_*` | Datos de vuestro almacén y datos fiscales para etiquetas y facturas |
-
-### 3. Crear las tablas y el primer administrador
+En local:
 ```bash
+cp .env.example .env   # rellena las 6 variables
 npm install
-npm run db:migrate                                   # crea las tablas y activa RLS
-npm run create-admin -- tu@email.com "contraseña" "Tu nombre"
-npm run dev                                          # http://localhost:3000
+npm run dev            # abre http://localhost:3000 → /setup
 ```
-Opcional: `npm run db:seed` carga datos de demostración (3 clientes, ~5 semanas de pedidos, recepciones y devoluciones). Se niega a ejecutarse si hay tiendas reales conectadas.
-
-### 4. Publicarlo online (Vercel)
-1. Importa el repositorio en [vercel.com](https://vercel.com).
-2. Añade todas las variables del `.env` en *Settings → Environment Variables* y pon `NEXT_PUBLIC_APP_URL` con la URL final.
-3. Despliega. El build ya ejecuta `prisma generate`.
-4. Cuando haya cambios en el modelo de datos, ejecuta `npm run db:migrate` contra Supabase.
+Comandos útiles:
+- `npm run db:migrate`: crea o actualiza las tablas desde la terminal (alternativa al botón de `/setup`).
+- `npm run create-admin -- email "contraseña" "Nombre"`: crea un administrador desde la terminal.
+- `npm run setup:sql`: regenera `supabase/setup.sql`.
+- `npm run db:seed`: carga datos de demostración.
 
 ## Conectar una tienda
 

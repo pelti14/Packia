@@ -12,7 +12,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   const user = await requireUser(["ADMIN", "CLIENT"]);
   const invoice = await db.invoice.findUnique({ where: { id }, include: { client: true, lines: true } });
   if (!invoice || !canAccessClient(user, invoice.clientId)) notFound();
-  const me = issuer();
+  const me = await issuer();
 
   return (
     <>

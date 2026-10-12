@@ -1,4 +1,5 @@
 import type { Address } from "@/lib/types";
+import { getSettings } from "@/lib/settings";
 import { countryCode } from "./sender";
 
 /**
@@ -7,19 +8,22 @@ import { countryCode } from "./sender";
  */
 const BASE = process.env.SENDCLOUD_API_URL ?? "https://panel.sendcloud.sc/api/v2";
 
-export function sendcloudEnabled() {
-  return Boolean(process.env.SENDCLOUD_PUBLIC_KEY && process.env.SENDCLOUD_SECRET_KEY);
+type Keys = { publicKey: string; secretKey: string };
+
+export async function sendcloudEnabled() {
+  const { publicKey, secretKey } = (await getSettings()).sendcloud;
+  return Boolean(publicKey && secretKey);
 }
 
-function auth() {
-  const token = Buffer.from(`${process.env.SENDCLOUD_PUBLIC_KEY}:${process.env.SENDCLOUD_SECRET_KEY}`).toString("base64");
-  return { Authorization: `Basic ${token}` };
+async function auth(keys?: Keys) {
+  const { publicKey, secretKey } = keys ?? (await getSettings()).sendcloud;
+  return { Authorization: `Basic ${Buffer.from(`${publicKey}:${secretKey}`).toString("base64")}` };
 }
 
-async function call<T>(path: string, init?: { method?: string; body?: unknown }): Promise<T> {
+async function call<T>(path: string, init?: { method?: string; body?: unknown; keys?: Keys }): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: init?.method ?? "GET",
-    headers: { ...auth(), "Content-Type": "application/json" },
+    headers: { ...(await auth(init?.keys)), "Content-Type": "application/json" },
     body: init?.body ? JSON.stringify(init.body) : undefined,
     cache: "no-store",
   });
@@ -30,10 +34,11 @@ async function call<T>(path: string, init?: { method?: string; body?: unknown })
 export type ShippingMethod = { id: number; name: string; carrier: string; minWeight: number; maxWeight: number };
 
 /** Métodos de envío activos en la cuenta de Sendcloud. */
-export async function listShippingMethods(): Promise<ShippingMethod[]> {
-  if (!sendcloudEnabled()) return [];
+export async function listShippingMethods(keys?: Keys): Promise<ShippingMethod[]> {
+  if (!keys && !(await sendcloudEnabled())) return [];
   const data = await call<{ shipping_methods: { id: number; name: string; carrier: string; min_weight: string; max_weight: string }[] }>(
     "/shipping_methods",
+    { keys },
   );
   return data.shipping_methods
     .filter((m) => m.id !== 8) // 8 = "Unstamped letter", no genera etiqueta
@@ -82,7 +87,7 @@ export async function createParcel(input: {
 
 /** PDF A6 de la etiqueta para impresora térmica. */
 export async function fetchLabelPdf(parcelId: string): Promise<Uint8Array> {
-  const res = await fetch(`${BASE}/labels/label_printer/${parcelId}`, { headers: auth(), cache: "no-store" });
+  const res = await fetch(`${BASE}/labels/label_printer/${parcelId}`, { headers: await auth(), cache: "no-store" });
   if (!res.ok) throw new Error(`Sendcloud respondió ${res.status} al descargar la etiqueta`);
   return new Uint8Array(await res.arrayBuffer());
 }
