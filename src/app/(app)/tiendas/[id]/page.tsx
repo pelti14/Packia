@@ -52,11 +52,11 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
 
       <div className="grid gap-6 xl:grid-cols-5">
         <Card className="xl:col-span-3">
-          <CardHeader title="Webhooks · pedidos en tiempo real" subtitle="Así cada pedido pagado entra en la cola al instante" action={<Webhook className="h-5 w-5 text-brand-500" />} />
+          <CardHeader title="Webhooks · pedidos en tiempo real" subtitle="Así cada pedido pagado entra en la cola al instante" action={<Webhook className="h-5 w-5 text-brand-600" />} />
           <div className="space-y-5 px-5 py-5">
             <CopyField label="URL de entrega" value={webhookUrl} />
             {!shopify && store.webhookSecret && user.role === "ADMIN" && <CopyField label="Secreto" value={decrypt(store.webhookSecret) ?? ""} />}
-            <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed text-ink-700 marker:font-semibold marker:text-brand-500">
+            <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed text-ink-700 marker:font-semibold marker:text-brand-600">
               {shopify ? (
                 <>
                   <li><BrandName /> crea automáticamente en Shopify los webhooks de <b>pedido creado</b> y <b>pedido cancelado</b> al conectar la tienda.</li>

@@ -147,14 +147,14 @@ export function ConnectForm({ clients, defaultClient }: { clients: { id: string;
 
       <div className="xl:col-span-2">
         <div className="rounded-2xl border border-brand-100 bg-gradient-to-br from-brand-50/80 via-white/80 to-aqua-50/80 p-6 backdrop-blur">
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Paso a paso</div>
+          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">Paso a paso</div>
           <h3 className="mt-2 text-lg font-semibold text-ink-900">
             Cómo conectar {platform === "WOOCOMMERCE" ? "WooCommerce" : shopifyMode === "dev" ? "Shopify (Dev Dashboard)" : "Shopify (app antigua)"}
           </h3>
           <ol className="mt-5 space-y-4">
             {GUIDE[guide].map((step, i) => (
               <li key={i} className="flex gap-3">
-                <span className="mono flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-aqua-500 text-xs font-semibold text-white">
+                <span className="mono flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-ink-900 text-xs font-semibold text-brand-400">
                   {i + 1}
                 </span>
                 <span className="text-sm leading-relaxed text-ink-700">{step}</span>

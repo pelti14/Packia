@@ -33,7 +33,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
             </div>
           </div>
           <div className="sm:text-right">
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Factura</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">Factura</div>
             <div className="mono mt-1 text-2xl font-bold text-ink-900">{invoice.number}</div>
             <div className="mt-2 text-sm text-ink-500">Fecha: {formatDateOnly(invoice.issuedAt)}</div>
             <div className="text-sm text-ink-500">Periodo: {invoicePeriodLabel(invoice)}</div>

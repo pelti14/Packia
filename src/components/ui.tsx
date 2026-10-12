@@ -12,7 +12,7 @@ export function PageHeader({ eyebrow, title, description, actions }: {
   return (
     <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        {eyebrow && <div className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">{eyebrow}</div>}
+        {eyebrow && <div className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">{eyebrow}</div>}
         <h1 className="text-3xl font-bold text-ink-900 sm:text-4xl">{title}</h1>
         {description && <p className="mt-2 max-w-2xl text-sm text-ink-500">{description}</p>}
       </div>
@@ -106,7 +106,7 @@ export function EmptyState({ icon: Icon, title, children }: { icon: LucideIcon; 
   return (
     <div className="flex flex-col items-center px-6 py-14 text-center">
       <div className="rounded-2xl bg-gradient-to-br from-brand-50 to-aqua-50 p-4 ring-1 ring-brand-100">
-        <Icon className="h-6 w-6 text-brand-500" />
+        <Icon className="h-6 w-6 text-brand-600" />
       </div>
       <h3 className="mt-4 text-base font-semibold text-ink-900">{title}</h3>
       {children && <div className="mt-1 max-w-sm text-sm text-ink-500">{children}</div>}

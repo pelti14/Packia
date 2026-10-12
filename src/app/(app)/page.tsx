@@ -88,8 +88,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                     <div
                       className={
                         isToday
-                          ? "w-full rounded-t-lg bg-gradient-to-t from-brand-600 to-aqua-400 shadow-[0_0_24px_-4px_rgb(79_107_255/0.6)]"
-                          : "w-full rounded-t-lg bg-gradient-to-t from-brand-200 to-brand-100 transition group-hover:from-brand-400 group-hover:to-aqua-400"
+                          ? "w-full rounded-t-lg bg-gradient-to-t from-brand-500 to-brand-300 shadow-[0_0_24px_-4px_rgb(150_200_0/0.7)]"
+                          : "w-full rounded-t-lg bg-gradient-to-t from-brand-200 to-brand-100 transition group-hover:from-brand-400 group-hover:to-brand-200"
                       }
                       style={{ height: `${Math.max(3, (d.count / max) * 100)}%` }}
                     />

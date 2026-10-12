@@ -49,7 +49,7 @@ export function Station(props: {
       <div className="glass overflow-hidden xl:col-span-3">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line/70 px-6 py-5">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">{order.clientName}</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">{order.clientName}</div>
             <div className="mono mt-1 text-4xl font-bold text-ink-900">{order.number}</div>
             <div className="mt-1 text-sm text-ink-500">{order.customerName}</div>
           </div>

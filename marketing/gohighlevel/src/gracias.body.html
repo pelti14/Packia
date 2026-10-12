@@ -1,6 +1,6 @@
 <div class="pk" id="inicio" style="min-height:100vh">
 <nav class="nav"><div class="wrap">{{LOGO}}</div></nav>
-<section class="hero" style="padding:100px 0"><div class="grid-bg"></div><div class="glow" style="width:420px;height:420px;background:#22c993;top:-160px;left:50%;margin-left:-210px;opacity:.3"></div>
+<section class="hero" style="padding:100px 0"><div class="grid-bg"></div><div class="glow" style="width:420px;height:420px;background:#c3fc1d;top:-160px;left:50%;margin-left:-210px;opacity:.3"></div>
 <div class="wrap center" style="position:relative">
   <div class="ico" style="margin:0 auto 22px;width:64px;height:64px;font-size:1.8rem;background:#e7faf3;box-shadow:inset 0 0 0 1px rgba(34,201,147,.3)">✓</div>
   <h1>¡Recibido! <span class="grad">Te escribimos muy pronto.</span></h1>
@@ -30,6 +30,13 @@
       if(b.name!=="Kargia")all('[data-pk-wordmark]',function(el){el.textContent=b.name});
       if(b.logo)all('[data-pk-logo]',function(el){var i=document.createElement("img");i.src=b.logo;i.alt=b.name;i.width=38;i.height=38;i.style.borderRadius="11px";i.style.objectFit="contain";el.replaceWith(i)});
       document.title=document.title.replace(/Kargia/g,b.name);
+    }
+    var c=d.contact||{};
+    if(c.whatsapp)all('a[href*="wa.me/"]',function(a){a.href=a.href.replace(/wa\.me\/\d+/,"wa.me/"+c.whatsapp)});
+    if(c.email)all('[data-pk="contact.email"]',function(el){el.textContent=c.email;if(el.tagName==="A")el.href="mailto:"+c.email});
+    if(c.phone)all('[data-pk="contact.phone"]',function(el){el.textContent=c.phone;el.href="tel:"+c.phone.replace(/[^\d+]/g,"");el.hidden=false});
+    if(d.legal)all('[data-pk="legal"]',function(el){el.textContent=d.legal.name+" · NIF "+d.legal.taxId+(d.legal.address?" · "+d.legal.address:"");el.hidden=false});
+    if(b&&b.name){
       all('a[href*="wa.me"]',function(a){a.href=a.href.replace(/Kargia/g,encodeURIComponent(b.name))});
     }
     var min=null;

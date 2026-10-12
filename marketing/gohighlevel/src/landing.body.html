@@ -4,7 +4,7 @@
   <a href="#formulario" class="btn btn-p">Pedir propuesta</a>
 </div></nav>
 
-<header class="hero"><div class="grid-bg"></div><div class="glow" style="width:420px;height:420px;background:#4f6bff;top:-140px;right:-80px"></div><div class="glow" style="width:320px;height:320px;background:#12c8d9;bottom:-160px;left:-120px;opacity:.3"></div>
+<header class="hero"><div class="grid-bg"></div><div class="glow" style="width:420px;height:420px;background:#c3fc1d;top:-140px;right:-80px"></div><div class="glow" style="width:320px;height:320px;background:#c3fc1d;bottom:-160px;left:-120px;opacity:.3"></div>
 <div class="wrap hero-grid">
   <div>
     <div class="chips"><span class="chip"><span class="dot"></span>Para tiendas Shopify y WooCommerce</span><span class="chip">+300 pedidos/mes</span></div>
@@ -75,7 +75,7 @@
 
 <footer><div class="wrap">
   {{LOGO}}
-  <span>© <span data-pk="brand.name">Kargia</span> · Logística para tiendas online · <a href="mailto:{{EMAIL}}">{{EMAIL}}</a></span>
+  <span>© <span data-pk="brand.name">Kargia</span> · Logística para tiendas online · <a href="mailto:{{EMAIL}}" data-pk="contact.email">{{EMAIL}}</a> <a data-pk="contact.phone" hidden></a><span class="legal" data-pk="legal" hidden></span></span>
 </div></footer>
 <div class="mcta"><a href="#formulario" class="btn btn-p">Pedir propuesta</a><a href="https://wa.me/{{WHATSAPP}}?text={{WA_TEXT}}" class="btn btn-w">WhatsApp</a></div>
 </div>
@@ -95,6 +95,13 @@
       if(b.name!=="Kargia")all('[data-pk-wordmark]',function(el){el.textContent=b.name});
       if(b.logo)all('[data-pk-logo]',function(el){var i=document.createElement("img");i.src=b.logo;i.alt=b.name;i.width=38;i.height=38;i.style.borderRadius="11px";i.style.objectFit="contain";el.replaceWith(i)});
       document.title=document.title.replace(/Kargia/g,b.name);
+    }
+    var c=d.contact||{};
+    if(c.whatsapp)all('a[href*="wa.me/"]',function(a){a.href=a.href.replace(/wa\.me\/\d+/,"wa.me/"+c.whatsapp)});
+    if(c.email)all('[data-pk="contact.email"]',function(el){el.textContent=c.email;if(el.tagName==="A")el.href="mailto:"+c.email});
+    if(c.phone)all('[data-pk="contact.phone"]',function(el){el.textContent=c.phone;el.href="tel:"+c.phone.replace(/[^\d+]/g,"");el.hidden=false});
+    if(d.legal)all('[data-pk="legal"]',function(el){el.textContent=d.legal.name+" · NIF "+d.legal.taxId+(d.legal.address?" · "+d.legal.address:"");el.hidden=false});
+    if(b&&b.name){
       all('a[href*="wa.me"]',function(a){a.href=a.href.replace(/Kargia/g,encodeURIComponent(b.name))});
     }
     var min=null;

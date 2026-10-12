@@ -67,7 +67,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                     <div
                       className={clsx(
                         "flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold transition",
-                        done && "bg-gradient-to-br from-brand-500 to-aqua-500 text-white shadow-[var(--shadow-glow)]",
+                        done && "bg-brand-400 text-ink-900 shadow-[var(--shadow-glow)]",
                         current && "bg-white text-brand-600 ring-2 ring-brand-500",
                         !done && !current && "bg-line/60 text-ink-400",
                       )}
@@ -106,7 +106,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
             <CardHeader title="Envío" />
             <div className="space-y-4 px-5 py-5">
               <div className="flex gap-3">
-                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" />
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
                 <div className="text-sm leading-relaxed text-ink-700">
                   <div className="font-semibold text-ink-900">{address.name || order.customerName}</div>
                   <div>{address.address1}</div>

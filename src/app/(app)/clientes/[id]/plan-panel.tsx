@@ -129,7 +129,7 @@ export async function PlanPanel({ clientId }: { clientId: string }) {
           <ul className="divide-y divide-line/60">
             {changes.map((c) => (
               <li key={c.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
-                <History className="h-4 w-4 text-brand-500" />
+                <History className="h-4 w-4 text-brand-600" />
                 <span className="font-medium text-ink-900">{formatDateOnly(c.effectiveAt)}</span>
                 <span className="text-ink-700">
                   {label(c.fromPlan)} ({c.fromOrders} ped. · {eur(c.fromFeeCents)}) → <b>{label(c.toPlan)}</b> ({c.toOrders} ped. · {eur(c.toFeeCents)})

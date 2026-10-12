@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { ArrowDown, ArrowUp, Check, LogOut } from "lucide-react";
 import { clsx } from "clsx";
 import { db } from "@/lib/db";
+import { getBrand } from "@/lib/brand";
 import { requireUser } from "@/lib/auth";
 import { usageFor } from "@/lib/billing";
 import { applyDuePlanRequests, defaultLastDay, getPlans, monthlyIncluded, nextMonthStart } from "@/lib/plans";
@@ -21,6 +22,7 @@ export default async function MiPlanPage({ searchParams }: { searchParams: Promi
   if (!user.clientId) redirect("/");
   await applyDuePlanRequests();
   const client = await db.client.findUniqueOrThrow({ where: { id: user.clientId } });
+  const brand = await getBrand();
   const [plans, usage, included, pending] = await Promise.all([
     getPlans(),
     usageFor(client, monthKey()),
@@ -35,7 +37,19 @@ export default async function MiPlanPage({ searchParams }: { searchParams: Promi
 
   return (
     <>
-      <PageHeader eyebrow="Tu cuenta" title="Mi plan" description="Sube de plan cuando lo necesites, bájalo para el mes que viene o solicita la baja. Sin permanencia." />
+      <PageHeader
+        eyebrow="Tu cuenta"
+        title="Mi plan"
+        description="Sube de plan cuando lo necesites, bájalo para el mes que viene o solicita la baja. Sin permanencia."
+        actions={
+          (brand.whatsapp || brand.email) && (
+            <div className="flex gap-2">
+              {brand.whatsapp && <a href={`https://wa.me/${brand.whatsapp}`} target="_blank" rel="noreferrer" className="btn-primary">WhatsApp</a>}
+              {brand.email && <a href={`mailto:${brand.email}`} className="btn-ghost">{brand.email}</a>}
+            </div>
+          )
+        }
+      />
       {ok && <div className="mb-4"><Notice tone="success">{ok}</Notice></div>}
       {error && <div className="mb-4"><Notice tone="error">{error}</Notice></div>}
 

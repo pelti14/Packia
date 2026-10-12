@@ -30,7 +30,7 @@ export function CutoffClock() {
 
   return (
     <div className="glass flex items-center gap-3 rounded-xl px-3.5 py-2">
-      <Timer className={open ? "h-4 w-4 text-brand-500" : "h-4 w-4 text-ink-400"} />
+      <Timer className={open ? "h-4 w-4 text-brand-600" : "h-4 w-4 text-ink-400"} />
       <div className="text-xs text-ink-500">{open ? "Corte de hoy en" : "Corte cerrado · sale mañana"}</div>
       {open && <div className="mono font-semibold text-ink-900">{pad(h)}:{pad(m)}:{pad(s)}</div>}
     </div>

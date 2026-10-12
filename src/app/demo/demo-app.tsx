@@ -420,7 +420,7 @@ function Station({ order, bySku, blockers, onValidate, onPack, onUnpack, onShip,
         </div>
         <div className="space-y-4">
           <div className="glass p-4 text-sm">
-            <div className="mb-2 flex items-center gap-2 font-semibold text-ink-900"><ScanBarcode className="h-4 w-4 text-brand-500" /> Prueba el escáner</div>
+            <div className="mb-2 flex items-center gap-2 font-semibold text-ink-900"><ScanBarcode className="h-4 w-4 text-brand-600" /> Prueba el escáner</div>
             <p className="text-ink-500">Escribe uno de estos códigos en «Escanea…» y pulsa Intro:</p>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {codes.map((c) => <span key={c} className="mono rounded-lg bg-mint-50 px-2 py-1 text-xs text-mint-600">{c}</span>)}

@@ -112,8 +112,19 @@ export async function saveBrand(_: FormState, form: FormData): Promise<FormState
   await assertRole(["ADMIN"]);
   const name = str(form.get("brandName")).slice(0, 40);
   const tagline = str(form.get("brandTagline")).slice(0, 40);
-  const values = { brandName: name, brandTagline: tagline };
-  const data: { brandName: string | null; brandTagline: string | null; brandLogo?: string | null } = { brandName: name || null, brandTagline: tagline || null };
+  const whatsapp = str(form.get("contactWhatsapp")).replace(/[\s+()-]/g, "");
+  const phone = str(form.get("contactPhone")).slice(0, 30);
+  const email = str(form.get("contactEmail")).toLowerCase().slice(0, 120);
+  const values = { brandName: name, brandTagline: tagline, contactWhatsapp: str(form.get("contactWhatsapp")), contactPhone: phone, contactEmail: email };
+  if (whatsapp && !/^\d{8,15}$/.test(whatsapp)) return { error: "WhatsApp: escribe el número con prefijo de país, por ejemplo 34612345678", values };
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "El email de contacto no es válido", values };
+  const data: { brandName: string | null; brandTagline: string | null; brandLogo?: string | null; contactWhatsapp: string | null; contactPhone: string | null; contactEmail: string | null } = {
+    brandName: name || null,
+    brandTagline: tagline || null,
+    contactWhatsapp: whatsapp || null,
+    contactPhone: phone || null,
+    contactEmail: email || null,
+  };
 
   const file = form.get("brandLogo");
   if (form.get("removeLogo")) {

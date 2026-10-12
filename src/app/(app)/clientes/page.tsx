@@ -39,7 +39,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
               <Card key={c.id} className="p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-aqua-500 font-display text-lg font-bold text-white shadow-[var(--shadow-glow)]">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-ink-900 font-display text-lg font-bold text-brand-400">
                       {c.name.charAt(0)}
                     </div>
                     <div>

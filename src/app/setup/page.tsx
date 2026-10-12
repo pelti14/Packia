@@ -28,7 +28,7 @@ function Step({ n, title, done, active, children }: { n: number; title: string; 
         <span
           className={clsx(
             "mono flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold",
-            done ? "bg-gradient-to-br from-mint-500 to-aqua-500 text-white" : active ? "bg-gradient-to-br from-brand-500 to-aqua-500 text-white" : "bg-line/70 text-ink-500",
+            done ? "bg-brand-400 text-ink-900" : active ? "bg-ink-900 text-brand-400" : "bg-line/70 text-ink-500",
           )}
         >
           {done ? "✓" : n}
@@ -72,7 +72,7 @@ export default async function SetupPage() {
       <div className="relative mx-auto max-w-3xl space-y-6">
         <Logo />
         <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-500">Configuración inicial</div>
+          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">Configuración inicial</div>
           <h1 className="mt-2 text-3xl font-bold sm:text-4xl">Pon <BrandName /> en marcha</h1>
           <p className="mt-2 text-sm text-ink-500">Cuatro pasos. Esta página solo está disponible hasta que exista el primer administrador.</p>
         </div>

@@ -87,7 +87,7 @@ export function PickList({ orderId, items, interactive = true, size = "md", show
         <>
           <form onSubmit={onScan} className="flex items-center gap-2 border-b border-line/60 px-5 py-3">
             <div className="relative flex-1">
-              <ScanBarcode className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-500" />
+              <ScanBarcode className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-600" />
               <input
                 ref={scanRef}
                 value={scan}

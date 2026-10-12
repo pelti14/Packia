@@ -1,49 +1,52 @@
 @import "tailwindcss";
 
-/* ───────────── Marca Packia ─────────────
-   Claro, limpio y "futurista": fondo casi blanco, cristal translúcido,
-   degradado azul eléctrico → aqua y acentos violeta. */
+/* ───────────── Marca Kargia ─────────────
+   Colores del logo: negro, blanco y lima. Fondo claro y limpio; el lima se usa
+   de relleno (botones, barras, marcas) y su versión oliva para textos sobre blanco. */
 @theme {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
   --font-display: var(--font-grotesk), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
-  --color-canvas: #f5f7fb;
-  --color-ink-900: #0b1324;
-  --color-ink-700: #27324a;
-  --color-ink-500: #5b6782;
-  --color-ink-400: #8a94ab;
-  --color-line: #e3e8f2;
+  --color-canvas: #f5f5f2;
+  --color-ink-900: #0b0b0d;
+  --color-ink-700: #2a2b30;
+  --color-ink-500: #5f6168;
+  --color-ink-400: #8e9097;
+  --color-line: #e5e6e1;
 
-  --color-brand-50: #eef1ff;
-  --color-brand-100: #dfe5ff;
-  --color-brand-200: #c3ceff;
-  --color-brand-400: #7b92ff;
-  --color-brand-500: #4f6bff;
-  --color-brand-600: #3a52f0;
-  --color-brand-700: #2d40c9;
+  /* Lima del logo (#c3fc1d) y sus tonos */
+  --color-brand-50: #f8ffe3;
+  --color-brand-100: #eefcc2;
+  --color-brand-200: #ddf98a;
+  --color-brand-300: #cffb52;
+  --color-brand-400: #c3fc1d;
+  --color-brand-500: #b2ec0a;
+  --color-brand-600: #567300;
+  --color-brand-700: #3f5500;
 
-  --color-aqua-50: #e8fbfd;
-  --color-aqua-400: #3fd9e6;
-  --color-aqua-500: #12c8d9;
-  --color-aqua-600: #0aa3b3;
+  /* Complementario (antes aqua): lima claro → verde */
+  --color-aqua-50: #f3ffd6;
+  --color-aqua-400: #dcff6b;
+  --color-aqua-500: #9edc00;
+  --color-aqua-600: #4b6b00;
 
-  --color-violet-400: #a597ff;
-  --color-violet-500: #8b7cff;
+  --color-violet-400: #c3fc1d;
+  --color-violet-500: #b2ec0a;
 
   --color-mint-50: #e7faf3;
-  --color-mint-500: #22c993;
-  --color-mint-600: #12a476;
+  --color-mint-500: #1fbf86;
+  --color-mint-600: #0e9a69;
 
   --color-amber-50: #fff6e5;
   --color-amber-500: #f5a524;
-  --color-amber-600: #d9870b;
+  --color-amber-600: #c97a06;
 
   --color-rose-50: #fff0f2;
-  --color-rose-500: #f0476a;
+  --color-rose-500: #ec3d63;
 
-  --shadow-glass: 0 1px 0 0 rgb(255 255 255 / 0.8) inset, 0 12px 32px -12px rgb(30 50 120 / 0.14), 0 2px 6px -2px rgb(30 50 120 / 0.06);
-  --shadow-glow: 0 10px 30px -10px rgb(79 107 255 / 0.55);
+  --shadow-glass: 0 1px 0 0 rgb(255 255 255 / 0.8) inset, 0 12px 32px -12px rgb(11 11 13 / 0.12), 0 2px 6px -2px rgb(11 11 13 / 0.05);
+  --shadow-glow: 0 10px 28px -10px rgb(150 200 0 / 0.65);
 }
 
 @layer base {
@@ -53,24 +56,24 @@
   body {
     @apply bg-canvas text-ink-900 font-sans antialiased;
     background-image:
-      radial-gradient(60rem 40rem at 110% -10%, rgb(18 200 217 / 0.13), transparent 60%),
-      radial-gradient(50rem 36rem at -10% 0%, rgb(139 124 255 / 0.12), transparent 60%),
-      radial-gradient(40rem 30rem at 50% 120%, rgb(79 107 255 / 0.08), transparent 60%);
+      radial-gradient(60rem 40rem at 110% -10%, rgb(195 252 29 / 0.16), transparent 60%),
+      radial-gradient(50rem 36rem at -10% 0%, rgb(11 11 13 / 0.04), transparent 60%),
+      radial-gradient(40rem 30rem at 50% 120%, rgb(195 252 29 / 0.10), transparent 60%);
     background-attachment: fixed;
   }
   h1, h2, h3 {
     @apply font-display tracking-tight;
   }
   ::selection {
-    background: rgb(79 107 255 / 0.18);
+    background: rgb(195 252 29 / 0.55);
   }
 }
 
 /* Rejilla técnica muy sutil detrás del contenido */
 @utility bg-grid {
   background-image:
-    linear-gradient(to right, rgb(79 107 255 / 0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(79 107 255 / 0.06) 1px, transparent 1px);
+    linear-gradient(to right, rgb(11 11 13 / 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(11 11 13 / 0.045) 1px, transparent 1px);
   background-size: 32px 32px;
   mask-image: radial-gradient(ellipse at top, black 30%, transparent 75%);
 }
@@ -80,23 +83,31 @@
   box-shadow: var(--shadow-glass);
 }
 
+/* Resaltado de marca: subrayado grueso lima, como un rotulador */
 @utility text-gradient {
-  @apply bg-gradient-to-r from-brand-600 via-brand-500 to-aqua-500 bg-clip-text text-transparent;
+  background-image: linear-gradient(transparent 58%, var(--color-brand-400) 58%, var(--color-brand-400) 92%, transparent 92%);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  padding: 0 0.06em;
 }
 
 @utility btn {
   @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 disabled:pointer-events-none disabled:opacity-50;
 }
 @utility btn-primary {
-  @apply btn bg-gradient-to-r from-brand-600 to-brand-500 text-white hover:-translate-y-px hover:from-brand-700 hover:to-brand-600;
-  box-shadow: var(--shadow-glow);
+  @apply btn bg-brand-400 font-semibold text-ink-900 hover:-translate-y-px hover:bg-brand-300;
+  box-shadow: var(--shadow-glow), inset 0 0 0 1px rgb(11 11 13 / 0.06);
+}
+/* Botón oscuro (negro del logo) */
+@utility btn-dark {
+  @apply btn bg-ink-900 font-semibold text-white hover:-translate-y-px hover:bg-ink-700;
 }
 @utility btn-ghost {
-  @apply btn border border-line bg-white/80 text-ink-700 hover:border-brand-200 hover:bg-white hover:text-brand-600;
+  @apply btn border border-line bg-white/80 text-ink-700 hover:border-ink-400 hover:bg-white hover:text-ink-900;
 }
 
 @utility input {
-  @apply w-full rounded-xl border border-line bg-white/90 px-3.5 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 transition outline-none focus:border-brand-400 focus:ring-4 focus:ring-brand-100;
+  @apply w-full rounded-xl border border-line bg-white/90 px-3.5 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 transition outline-none focus:border-ink-900 focus:ring-4 focus:ring-brand-200/70;
 }
 @utility label {
   @apply mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink-500;

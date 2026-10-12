@@ -48,12 +48,12 @@ function NavLink({ item, active, badge, onNavigate }: { item: Item; active: bool
       className={clsx(
         "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
         active
-          ? "bg-gradient-to-r from-brand-50 to-white text-brand-700 shadow-[inset_0_0_0_1px_var(--color-brand-100)]"
+          ? "bg-ink-900 text-white shadow-[0_8px_20px_-10px_rgb(11_11_13/0.6)]"
           : "text-ink-500 hover:bg-white/80 hover:text-ink-900",
       )}
     >
-      {active && <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-gradient-to-b from-brand-500 to-aqua-500" />}
-      <Icon className={clsx("h-[18px] w-[18px]", active ? "text-brand-600" : "text-ink-400 group-hover:text-ink-700")} />
+      {active && <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-brand-400" />}
+      <Icon className={clsx("h-[18px] w-[18px]", active ? "text-brand-400" : "text-ink-400 group-hover:text-ink-700")} />
       {item.label}
       {badge && (
         <span
@@ -90,9 +90,9 @@ export function Sidebar({ role, user }: { role: Role; user: { name: string; deta
       </nav>
 
       <div className="mt-auto mb-2 px-3 text-[10px] font-medium text-ink-400"><BrandName /> v{process.env.NEXT_PUBLIC_APP_VERSION}</div>
-      <div className="rounded-2xl border border-brand-100 bg-gradient-to-br from-brand-50 via-white to-aqua-50 p-3">
+      <div className="rounded-2xl border border-line bg-white/80 p-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-aqua-500 text-sm font-bold text-white">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-ink-900 text-sm font-bold text-brand-400">
             {user.name.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">

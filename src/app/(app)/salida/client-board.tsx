@@ -45,7 +45,7 @@ export function ClientBoard({ cards }: { cards: ClientCard[] }) {
             className="btn-ghost"
             disabled={!selectable.length}
           >
-            <span className={clsx("flex h-4 w-4 items-center justify-center rounded border", allSelected ? "border-brand-500 bg-brand-500 text-white" : "border-ink-400")}>
+            <span className={clsx("flex h-4 w-4 items-center justify-center rounded border", allSelected ? "border-ink-900 bg-brand-400 text-ink-900" : "border-ink-400")}>
               {allSelected && <Check className="h-3 w-3" />}
             </span>
             {allSelected ? "Quitar selección" : "Seleccionar todos"}
@@ -85,7 +85,7 @@ export function ClientBoard({ cards }: { cards: ClientCard[] }) {
               <span
                 className={clsx(
                   "absolute right-5 top-5 flex h-7 w-7 items-center justify-center rounded-full border-2 transition",
-                  on ? "border-brand-500 bg-brand-500 text-white" : "border-line bg-white text-transparent group-hover:border-brand-300",
+                  on ? "border-ink-900 bg-brand-400 text-ink-900" : "border-line bg-white text-transparent group-hover:border-brand-300",
                   empty && "hidden",
                 )}
               >

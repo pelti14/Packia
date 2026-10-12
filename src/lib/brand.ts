@@ -11,7 +11,7 @@ export { DEFAULT_BRAND, type Brand };
  */
 export const getBrand = cache(async (): Promise<Brand> => {
   const s = await db.appSettings
-    .findUnique({ where: { id: "default" }, select: { brandName: true, brandTagline: true, brandLogo: true } })
+    .findUnique({ where: { id: "default" }, select: { brandName: true, brandTagline: true, brandLogo: true, contactWhatsapp: true, contactPhone: true, contactEmail: true } })
     .catch(() => null);
   const name = s?.brandName?.trim() || DEFAULT_BRAND.name;
   return {
@@ -20,6 +20,9 @@ export const getBrand = cache(async (): Promise<Brand> => {
     // El logo viaja como URL ligera; la imagen la sirve /api/public/marca/logo.
     logo: s?.brandLogo ? `/api/public/marca/logo?v=${hash(s.brandLogo)}` : null,
     custom: name !== DEFAULT_BRAND.name || Boolean(s?.brandLogo),
+    whatsapp: s?.contactWhatsapp || null,
+    phone: s?.contactPhone || null,
+    email: s?.contactEmail || null,
   };
 });
 

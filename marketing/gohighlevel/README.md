@@ -10,12 +10,14 @@ En esta carpeta hay 3 páginas listas para pegar en GoHighLevel (GHL):
 
 Para ver cómo quedan, abre cada archivo en el navegador (doble clic).
 
-> **Cambia antes de pegar** (con «Buscar y reemplazar» de cualquier editor de texto, en los 3 archivos):
-> - `34600000000` → tu WhatsApp con prefijo y sin `+` ni espacios. Ejemplo: `34612345678`.
-> - `hola@kargia.eu` → tu email.
-> - `https://floralwhite-dugong-101545.hostingersite.com` → la dirección de tu Kargia, si cambias de dominio.
+> **Antes de pegar**, cambia solo una cosa (con «Buscar y reemplazar» en los 3 archivos):
+> - `https://floralwhite-dugong-101545.hostingersite.com` → la dirección de tu app (por ejemplo `https://app.kargia.eu`).
+>
+> WhatsApp, teléfono, email, nombre, logo, datos fiscales y precios **se ponen en la app** (Ajustes → Marca, Datos de la empresa y Planes y precios) y la web los coge sola.
 
 ### Marca y precios conectados con la app
+**Qué coge de la app:** nombre, logo, texto bajo el nombre, WhatsApp (todos los botones), teléfono y email del pie, datos fiscales (razón social, NIF y dirección, para el aviso legal) y precios.
+
 **Cómo se conecta, si GHL no tiene API con la app:** no hace falta. El HTML que pegas en GHL lleva un pequeño script. Cada vez que alguien abre la web, su navegador pide a tu app (`https://tu-app/api/public/planes`) el nombre, el logo y los precios, y los pone en la página. Es como cuando una web enseña el tiempo de otra página.
 - Esa dirección es pública a propósito: solo da nombre, eslogan, logo y precios. Nunca datos de clientes ni pedidos.
 - Si cambias algo en **Ajustes → Marca** o **Ajustes → Planes y precios**, la web lo muestra en unos minutos, sin tocar GoHighLevel.

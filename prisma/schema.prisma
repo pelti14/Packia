@@ -316,6 +316,10 @@ model AppSettings {
   brandTagline       String?
   /// Logo como data URL (png, jpg, webp o svg; máx. 300 KB).
   brandLogo          String?
+  /// Contacto público (web, landing y app): WhatsApp con prefijo, sin + ni espacios.
+  contactWhatsapp    String?
+  contactPhone       String?
+  contactEmail       String?
   updatedAt          DateTime @updatedAt
 }
 
