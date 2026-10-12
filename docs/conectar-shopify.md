@@ -11,7 +11,7 @@
 
 ## 2. Darle permisos y publicar la versión
 En la pantalla de la versión de la app:
-1. **App URL**: deja la que viene por defecto.
+1. **App URL**: deja la que viene por defecto (`https://shopify.dev/apps/default-app-home`). **No pongas la dirección de Packia**: dentro del admin de Shopify no se puede iniciar sesión. Packia se usa siempre desde su propia dirección.
 2. **Access → Scopes**: añade estos cuatro permisos:
    ```
    read_orders, read_products, read_merchant_managed_fulfillment_orders, write_merchant_managed_fulfillment_orders
@@ -30,6 +30,9 @@ En la pantalla de la versión de la app:
 | **Client secret** | En el mismo sitio, debajo del Client ID |
 
 > 🔒 Envía el **Client secret** por un canal privado, nunca por un grupo ni por email sin cifrar. Si se filtra, puedes generar uno nuevo desde el mismo Settings: el anterior deja de funcionar y hay que pasarle el nuevo a Packia.
+
+## Tu acceso a Packia
+Packia te enviará tu email de acceso y una contraseña temporal. Entra siempre desde la **dirección de Packia** en una pestaña normal del navegador, no desde el menú de Apps de Shopify.
 
 ## Ya está
 Packia prueba la conexión, importa tus productos y pedidos pendientes y crea solo los avisos (webhooks) para recibir cada pedido nuevo al instante. Cuando preparemos un pedido, tu cliente recibirá el email de Shopify con el número de seguimiento.

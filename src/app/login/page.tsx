@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Logo, LogoMark } from "@/components/logo";
 import { needsSetup } from "@/lib/setup";
 import { LoginForm } from "./login-form";
+import { FrameNotice } from "./frame-notice";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +48,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <div className="bg-grid pointer-events-none absolute inset-0" />
         <div className="glass relative w-full max-w-md p-8 sm:p-10">
           <div className="mb-8 lg:hidden"><Logo /></div>
-          <LoginForm next={next} error={error} />
+          <FrameNotice>
+            <LoginForm next={next} error={error} />
+          </FrameNotice>
         </div>
       </div>
     </div>
