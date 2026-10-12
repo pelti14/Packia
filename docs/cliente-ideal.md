@@ -79,31 +79,54 @@ Tiene tienda física y el ecommerce le está desbordando. Valora la confianza y 
 - Catálogos con cientos de variantes de talla y color.
 - Ticket medio muy bajo (menos de 15 €).
 
-## 9. Modelo de precios (borrador — validar)
+## 9. Competencia de referencia: LOPI Group (Huelva)
 
-> ⚠️ Una tarifa plana de 300 €/mes por 300 pedidos equivale a **1 € por pedido**, y eso no cubre costes.
+**Su modelo:** cuota fija por volumen, sin cobros por movimiento.
 
-Estimación de coste por 300 pedidos/mes:
-- Mano de obra: unos 4 min por pedido, que suman unas 20 h/mes, a 13–15 €/h → **260–300 €**
-- Material de embalaje (si lo incluyes), a 0,30–0,60 € por pedido → **90–180 €**
-- Recepción de mercancía, inventario, incidencias y devoluciones → horas extra
+| Plan | Pedidos/mes | Precio | € por pedido |
+|---|---|---|---|
+| Estándar | 300 | 480 € + IVA | 1,60 |
+| Plata | 600 | 850 € + IVA | 1,42 |
+| Oro | 1.000 | 1.200 € + IVA | 1,20 |
 
-**Propuesta: cuota fija + variable**
-- Cuota mensual (software, gestión y almacenaje base): **150–250 €**
-- Preparación por pedido: **1,80–2,50 €** (incluye 1 unidad)
-- Unidad adicional en el mismo pedido: **0,20–0,40 €**
-- Material de embalaje: a coste + margen, o el cliente aporta el suyo
-- Almacenaje extra: por palet o estantería
-- Recepción de mercancía: por hora o por bulto
-- Devoluciones: por unidad procesada
+- Incluye recepción, almacenaje con seguro, picking y packing, software, devoluciones, contrareembolso y soporte por WhatsApp.
+- **Límite de 50 referencias.** El exceso de pedidos se cobra a 1,20 €.
+- Envío en península desde 3,20 € (0–2 kg), con bolsas, etiquetas y combustible incluidos. MRW factura directo al cliente; **Correos Express y GLS los revende LOPI**, y ahí tienen margen.
+- Hora de corte a las 16:30 de lunes a viernes y sábados hasta las 11:00 (con MRW).
+- Primer mes gratis (solo Shopify), sin permanencia, operativo en 7–10 días, altas por tandas (genera escasez).
+- **Solo Shopify y Amazon FBM. No trabajan con WooCommerce.**
+- Su público real: tiendas de contrareembolso (COD) y vendedores de Amazon que vienen de FBA.
 
-Resultado orientativo para 300 pedidos: **unos 700–1.000 €/mes por cliente**.
+**Qué copiar:** la cuota fija con tramos y precio por exceso, el mensaje de "sin cobros por movimiento", la hora de corte como argumento, el WhatsApp directo, la ausencia de permanencia y la prueba gratis.
 
-Si se quiere vender como **tarifa fija por tramos** (más fácil de entender), se puede hacer así: hasta 300 pedidos X €, hasta 600 pedidos Y €, y cada pedido extra a Z €. Así nunca se pierde dinero si el cliente crece de golpe.
+**Dónde atacar:**
+1. **WooCommerce**, que ellos no cubren.
+2. **Más de 50 referencias**, en un tramo superior.
+3. **Unboxing de marca** (caja personalizada, tarjeta, muestras) frente a su bolsa estándar.
+4. **Cercanía**: clientes de nuestra zona que pueden traer el stock ellos mismos y visitarnos.
+5. Un trato todavía más personal, porque somos pequeños a propósito.
 
-*Pendiente: comparar con las tarifas públicas de competidores (Lopi, MPO, Cubyn, etc.).*
+## 10. Modelo de precios (borrador)
 
-## 10. Fase inicial (de 0 a 3 clientes)
+> El mercado ya fija el ancla: **unos 480 € por 300 pedidos (1,60 €/pedido)**. Cobrar 300 € es regalar margen y además da imagen de "barato", lo que genera desconfianza.
+
+**Propuesta Packia (cuota fija por tramos, igual de clara que la de LOPI):**
+
+| Plan | Pedidos/mes | Referencias | Precio orientativo | Exceso |
+|---|---|---|---|---|
+| Arranque | 300 | 50 | 450–490 € | 1,40 €/pedido |
+| Crecimiento | 600 | 100 | 820–880 € | 1,30 €/pedido |
+| Escala | 1.000 | 150 | 1.150–1.250 € | 1,20 €/pedido |
+
+- Incluye bolsa estándar. La **caja de marca o el unboxing personalizado** son un extra (+0,30–0,80 €/pedido), y ese extra es margen.
+- Almacenaje incluido hasta un límite (por ejemplo 2 palets o X estanterías). A partir de ahí, por palet extra.
+- **El transporte también es negocio:** revender una o dos agencias con margen (0,30–0,60 €/envío) aporta unos 90–180 € más al mes por cada cliente de 300 pedidos.
+
+**Coste estimado por cliente de 300 pedidos:** mano de obra 260–300 € más bolsas y etiquetas 30–60 €. Con 480 € de cuota más el margen del transporte, el **margen bruto ronda los 250–350 €/mes por cliente**.
+
+**Primer mes gratis:** con 0 clientes, mejor ofrecer **el primer mes al 50 %** o **dos semanas gratis**, para no trabajar gratis un mes entero con los primeros.
+
+## 11. Fase inicial (de 0 a 3 clientes)
 - Arrancar en la trastienda de los locales actuales.
 - Revisar el **seguro** para mercancía de terceros almacenada.
 - Acordar con el transportista una **recogida diaria fija**.
