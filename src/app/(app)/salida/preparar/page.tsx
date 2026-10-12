@@ -7,6 +7,8 @@ import { parseAddress } from "@/lib/format";
 import { urgency } from "@/lib/schedule";
 import { BackLink, Card, Notice, PageHeader } from "@/components/ui";
 import { Station } from "./station";
+import { BlockersNotice } from "@/components/blockers-notice";
+import { orderBlockers } from "@/lib/validation";
 
 const RANK = { OVERDUE: 0, TODAY: 1, LATER: 2 } as const;
 
@@ -71,6 +73,7 @@ export default async function PrepararPage({ searchParams }: { searchParams: Pro
   const a = parseAddress(current.shippingAddress);
   const shipping = await shippingOptionsFor(current.client);
   const packedCount = queue.filter((x) => x.status === "PACKED").length;
+  const blockers = await orderBlockers(current);
 
   return (
     <>
@@ -85,6 +88,7 @@ export default async function PrepararPage({ searchParams }: { searchParams: Pro
       </div>
       {LabelBanner}
       {shipping.error && <div className="mb-4"><Notice tone="error">Sendcloud no disponible: {shipping.error}</Notice></div>}
+      {blockers.length > 0 && <div className="mb-4"><BlockersNotice blockers={blockers} returnTo={`${base}&o=${current.id}`} /></div>}
       <Station
         key={current.id}
         order={{
@@ -98,10 +102,11 @@ export default async function PrepararPage({ searchParams }: { searchParams: Pro
         }}
         items={[...current.items]
           .sort((x, y) => (bySku.get(x.sku)?.location ?? "ZZ").localeCompare(bySku.get(y.sku)?.location ?? "ZZ"))
-          .map((i) => ({ id: i.id, sku: i.sku, name: i.name, quantity: i.quantity, location: bySku.get(i.sku)?.location ?? null, stock: bySku.get(i.sku)?.stock ?? null }))}
+          .map((i) => ({ id: i.id, sku: i.sku, name: i.name, quantity: i.quantity, location: bySku.get(i.sku)?.location ?? null, stock: bySku.get(i.sku)?.stock ?? null, barcode: bySku.get(i.sku)?.barcode ?? null }))}
         options={shipping.options}
         defaultValue={shipping.defaultValue}
         weight={await estimateWeight(current)}
+        blocked={blockers.length > 0}
         nextHref={next ? `${base}&o=${next.id}` : `${base}&o=fin`}
         prevHref={prev ? `${base}&o=${prev.id}` : null}
       />

@@ -119,6 +119,11 @@ model Product {
   /// Por debajo de este stock se avisa al cliente.
   lowStockAt  Int      @default(10)
   weightGrams Int?
+  /// Código de barras (EAN/UPC) para escanear en el picking.
+  barcode     String?
+  /// OK del equipo: hasta que no se valida, los pedidos con este producto no se pueden embalar.
+  validatedAt DateTime?
+  validatedBy String?
   updatedAt   DateTime @updatedAt
 
   @@unique([clientId, sku])

@@ -1,11 +1,12 @@
 import { Boxes, Layers, PackageX, TriangleAlert } from "lucide-react";
 import { db } from "@/lib/db";
 import { clientScope, isStaff, requireUser } from "@/lib/auth";
-import { Card, EmptyState, PageHeader, SearchBar, StatCard } from "@/components/ui";
+import { Card, EmptyState, PageHeader, SearchBar, StatCard, Tabs } from "@/components/ui";
 import { ProductRow } from "./product-row";
 
-export default async function InventoryPage({ searchParams }: { searchParams: Promise<{ client?: string; q?: string }> }) {
-  const { client, q } = await searchParams;
+export default async function InventoryPage({ searchParams }: { searchParams: Promise<{ client?: string; q?: string; tab?: string }> }) {
+  const { client, q, tab } = await searchParams;
+  const toValidate = tab === "validar";
   const user = await requireUser();
   const staff = isStaff(user);
   const scope = {
@@ -16,17 +17,19 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
         { sku: { contains: q, mode: "insensitive" as const } },
         { name: { contains: q, mode: "insensitive" as const } },
         { location: { contains: q, mode: "insensitive" as const } },
+        { barcode: { contains: q } },
         { client: { name: { contains: q, mode: "insensitive" as const } } },
       ],
     }),
   };
-  const [products, clients] = await Promise.all([
+  const [products, clients, pendingCount] = await Promise.all([
     db.product.findMany({
-      where: scope,
+      where: { ...scope, ...(toValidate ? { validatedAt: null } : {}) },
       include: { client: true },
       orderBy: [{ client: { name: "asc" } }, { location: "asc" }],
     }),
     staff ? db.client.findMany({ orderBy: { name: "asc" } }) : Promise.resolve([]),
+    db.product.count({ where: { ...clientScope(user), validatedAt: null } }),
   ]);
 
   const units = products.reduce((s, p) => s + p.stock, 0);
@@ -51,9 +54,23 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
         }
       />
 
-      <div className="mb-4">
-        <SearchBar placeholder="Buscar producto, SKU, ubicación o cliente…" defaultValue={q} keep={{ client }} />
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        {staff && (
+          <Tabs
+            active={toValidate ? "validar" : "todos"}
+            tabs={[
+              { key: "todos", label: "Todos", href: "/inventario" },
+              { key: "validar", label: "Por validar", href: "/inventario?tab=validar", count: pendingCount, tone: "rose" as const },
+            ]}
+          />
+        )}
+        <SearchBar placeholder="Buscar producto, SKU, código de barras, ubicación o cliente…" defaultValue={q} keep={{ client, tab }} />
       </div>
+      {staff && toValidate && pendingCount > 0 && (
+        <div className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-ink-700 ring-1 ring-amber-500/30">
+          Productos nuevos que aún no tienen el OK. Mientras no se validen, los pedidos que los llevan <b>no se pueden embalar</b>.
+        </div>
+      )}
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard label="Referencias" value={products.length} icon={Layers} tone="brand" />
@@ -77,7 +94,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
                 </tr>
               </thead>
               <tbody className="divide-y divide-line/60">
-                {products.map((p) => <ProductRow key={p.id} product={p} clientName={p.client.name} editable={staff} />)}
+                {products.map((p) => <ProductRow key={p.id} product={p} clientName={p.client.name} editable={staff} validated={Boolean(p.validatedAt)} />)}
               </tbody>
             </table>
           </div>

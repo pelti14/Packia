@@ -292,7 +292,7 @@ ALTER TABLE "Invoice" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "InvoiceLine" ENABLE ROW LEVEL SECURITY;
 
 INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
-VALUES ('4d90be9a-68c7-41e0-8e97-6762955f9eec', '10d15a52a8e24001cceeb9c7539d6c5f52df5221dffbccf056d82955d32e23c4', now(), '20261012030730_init', 1);
+VALUES ('183bb438-b493-4c52-843d-54e80c25ad45', '10d15a52a8e24001cceeb9c7539d6c5f52df5221dffbccf056d82955d32e23c4', now(), '20261012030730_init', 1);
 
 -- ════════ 20261012031806_app_settings ════════
 -- CreateTable
@@ -323,7 +323,7 @@ ALTER TABLE "AppSettings" ENABLE ROW LEVEL SECURITY;
 DO $$ BEGIN IF to_regclass('public._prisma_migrations') IS NOT NULL THEN ALTER TABLE "_prisma_migrations" ENABLE ROW LEVEL SECURITY; END IF; END $$;
 
 INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
-VALUES ('fca73c5b-2495-439f-9691-bdd3797c20ef', '43fa63b1c3f2360a1429f876f167cb5f74fc9d20c5e86ffa1d87a1a95fdb5aeb', now(), '20261012031806_app_settings', 1);
+VALUES ('2677e5bb-44f7-44a1-ae47-f0f848e8653a', '43fa63b1c3f2360a1429f876f167cb5f74fc9d20c5e86ffa1d87a1a95fdb5aeb', now(), '20261012031806_app_settings', 1);
 
 -- ════════ 20261012120000_shopify_dev_dashboard ════════
 -- AlterTable: Shopify Dev Dashboard (client credentials)
@@ -332,7 +332,7 @@ ADD COLUMN "shopifyClientSecret" TEXT,
 ADD COLUMN "tokenExpiresAt" TIMESTAMP(3);
 
 INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
-VALUES ('deb47a84-a476-404d-adf5-d2783f976ef1', 'b7d797a87902cbcea16cc86b75ca38d851ba8463137949e9c1a78c80f99065d2', now(), '20261012120000_shopify_dev_dashboard', 1);
+VALUES ('2e3b0ff4-194c-4a70-822d-07dad2e28251', 'b7d797a87902cbcea16cc86b75ca38d851ba8463137949e9c1a78c80f99065d2', now(), '20261012120000_shopify_dev_dashboard', 1);
 
 -- ════════ 20261012180000_v4_notifications_customers ════════
 -- AlterTable
@@ -416,7 +416,7 @@ ALTER TABLE "Notification" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "SyncLock" ENABLE ROW LEVEL SECURITY;
 
 INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
-VALUES ('e55598cd-8624-47e9-bd36-64aac055518c', '1e652c6e81c1a088bd5a8008377f6f032066eec7fae43178778b05921f2aba05', now(), '20261012180000_v4_notifications_customers', 1);
+VALUES ('98954e98-4501-4a33-9184-cef1156a6dc7', '1e652c6e81c1a088bd5a8008377f6f032066eec7fae43178778b05921f2aba05', now(), '20261012180000_v4_notifications_customers', 1);
 
 -- ════════ 20261012200000_v5_trial_autoinvoice ════════
 -- AlterTable
@@ -427,4 +427,18 @@ ALTER TABLE "Client" ADD COLUMN     "serviceStartAt" TIMESTAMP(3),
 ADD COLUMN     "trialWeeks" INTEGER NOT NULL DEFAULT 0;
 
 INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
-VALUES ('10a2645f-664d-49f0-9d75-5a9507cca611', 'fe21962bea31e1033a6bc9057e01b9ad6e98ac62f13769be29548cb8e78f518d', now(), '20261012200000_v5_trial_autoinvoice', 1);
+VALUES ('8f8cfdca-a196-4a5f-8d73-9176048a6b50', 'fe21962bea31e1033a6bc9057e01b9ad6e98ac62f13769be29548cb8e78f518d', now(), '20261012200000_v5_trial_autoinvoice', 1);
+
+-- ════════ 20261013090000_v6_product_validation ════════
+-- AlterTable
+ALTER TABLE "Product" ADD COLUMN     "barcode" TEXT,
+ADD COLUMN     "validatedAt" TIMESTAMP(3),
+ADD COLUMN     "validatedBy" TEXT;
+
+
+-- Los productos que ya existían se dan por validados (ya se estaban preparando).
+-- A partir de ahora, cada producto nuevo necesita el OK del equipo.
+UPDATE "Product" SET "validatedAt" = now(), "validatedBy" = 'Migración' WHERE "validatedAt" IS NULL;
+
+INSERT INTO "_prisma_migrations" (id, checksum, finished_at, migration_name, applied_steps_count)
+VALUES ('5c37c566-985d-4d0a-9797-a573efc2050f', '3c3981eab56c03c7c7c9c55031c0871401ed6cd441e4d0c066225c7e6285e0f6', now(), '20261013090000_v6_product_validation', 1);

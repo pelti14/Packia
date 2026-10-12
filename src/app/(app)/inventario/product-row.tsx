@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { clsx } from "clsx";
+import Link from "next/link";
 import { Pencil } from "lucide-react";
 import { updateProduct, type FormState } from "@/app/actions";
 import { SubmitButton } from "@/components/submit-button";
@@ -10,9 +11,10 @@ type Props = {
   product: { id: string; sku: string; name: string; imageUrl: string | null; stock: number; location: string | null; lowStockAt: number; weightGrams: number | null };
   clientName: string;
   editable: boolean;
+  validated: boolean;
 };
 
-export function ProductRow({ product: p, clientName, editable }: Props) {
+export function ProductRow({ product: p, clientName, editable, validated }: Props) {
   const [editing, setEditing] = useState(false);
   const [state, action] = useActionState<FormState, FormData>(async (prev, form) => {
     const r = await updateProduct(p.id, prev, form);
@@ -34,6 +36,15 @@ export function ProductRow({ product: p, clientName, editable }: Props) {
           <div className="min-w-0">
             <div className="truncate font-medium text-ink-900">{p.name}</div>
             <div className="mono text-xs text-ink-400">{p.sku}</div>
+            {!validated && (
+              editable ? (
+                <Link href={`/inventario/validar/${p.id}`} className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-600 ring-1 ring-amber-500/30 hover:bg-amber-100">
+                  Por validar · dar OK →
+                </Link>
+              ) : (
+                <span className="mt-1 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-600">En revisión</span>
+              )
+            )}
           </div>
         </div>
       </td>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
-import { Boxes, Contact, LayoutDashboard, LogOut, PackagePlus, Plug, Receipt, RotateCcw, Settings, ShieldCheck, Truck, Users, type LucideIcon } from "lucide-react";
+import { Boxes, Contact, Presentation, LayoutDashboard, LogOut, PackagePlus, Plug, Receipt, RotateCcw, Settings, ShieldCheck, Truck, Users, type LucideIcon } from "lucide-react";
 import { useNotifications } from "@/components/notifications";
 import type { Badge, Badges } from "@/lib/notifications";
 import { Logo } from "@/components/logo";
@@ -19,7 +19,7 @@ const OPERATIONS: Item[] = [
   { href: "/salida", label: "Salida", icon: Truck, roles: ALL, badge: "salida" },
   { href: "/recepcion", label: "Recepción", icon: PackagePlus, roles: ALL, badge: "recepcion" },
   { href: "/devoluciones", label: "Devoluciones", icon: RotateCcw, roles: ALL, badge: "devoluciones" },
-  { href: "/inventario", label: "Inventario", icon: Boxes, roles: ALL },
+  { href: "/inventario", label: "Inventario", icon: Boxes, roles: ALL, badge: "inventario" },
   { href: "/clientes-tienda", label: "Clientes tienda", icon: Contact, roles: ["ADMIN", "STAFF"] },
 ];
 
@@ -29,6 +29,7 @@ const BUSINESS: Item[] = [
   { href: "/tiendas", label: "Tiendas", icon: Plug, roles: ["ADMIN", "STAFF"], badge: "tiendas" },
   { href: "/usuarios", label: "Usuarios", icon: ShieldCheck, roles: ["ADMIN"] },
   { href: "/ajustes", label: "Ajustes", icon: Settings, roles: ["ADMIN"] },
+  { href: "/demo", label: "Modo demo", icon: Presentation, roles: ["ADMIN", "STAFF"] },
 ];
 
 const isActive = (pathname: string, href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`));

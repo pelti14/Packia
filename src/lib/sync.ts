@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { decrypt, encrypt } from "@/lib/crypto";
 import { notify } from "@/lib/notifications";
 import { ensureCustomersBackfilled, recordCustomer } from "@/lib/customers";
+import { pendingMigrations } from "@/lib/setup";
 import * as shopify from "@/lib/integrations/shopify";
 import * as woo from "@/lib/integrations/woocommerce";
 import type { ExternalOrder, ExternalProduct, Shipment } from "@/lib/types";
@@ -106,12 +107,25 @@ export async function upsertOrders(store: Store, orders: ExternalOrder[]): Promi
 }
 
 async function upsertProducts(store: Store, products: ExternalProduct[]) {
+  const known = new Set((await db.product.findMany({ where: { clientId: store.clientId }, select: { sku: true } })).map((p) => p.sku));
+  const fresh = products.filter((p) => !known.has(p.sku));
   for (const p of products) {
     await db.product.upsert({
       where: { clientId_sku: { clientId: store.clientId, sku: p.sku } },
       // El stock físico lo controla el almacén, nunca la tienda.
       create: { clientId: store.clientId, storeId: store.id, externalId: p.externalId, sku: p.sku, name: p.name, imageUrl: p.imageUrl },
       update: { storeId: store.id, externalId: p.externalId, name: p.name, imageUrl: p.imageUrl },
+      select: { id: true },
+    });
+  }
+  if (fresh.length && known.size > 0) {
+    // (En la primera sincronización de una tienda no avisamos de todo el catálogo de golpe.)
+    await notify({
+      title: `${fresh.length} ${fresh.length === 1 ? "producto nuevo" : "productos nuevos"} por validar`,
+      body: fresh.slice(0, 3).map((p) => p.sku).join(", ") + (fresh.length > 3 ? "…" : ""),
+      href: "/inventario?tab=validar",
+      clientId: store.clientId,
+      tone: "warning",
     });
   }
 }
@@ -165,6 +179,8 @@ const LOCK_ID = "store-sync";
  * procesos (o dos llamadas al cron) lo hagan a la vez.
  */
 export async function syncAllStores(): Promise<{ ran: boolean; stores: number; orders: number; errors: number }> {
+  // Con una versión nueva aún sin actualizar la base de datos, no tocamos nada.
+  if ((await pendingMigrations()).length) return { ran: false, stores: 0, orders: 0, errors: 0 };
   const now = new Date();
   await db.syncLock.upsert({ where: { id: LOCK_ID }, create: { id: LOCK_ID, lockedUntil: new Date(0) }, update: {} });
   const got = await db.syncLock.updateMany({ where: { id: LOCK_ID, lockedUntil: { lt: now } }, data: { lockedUntil: new Date(now.getTime() + 5 * 60_000) } });

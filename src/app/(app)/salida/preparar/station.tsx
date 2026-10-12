@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, PackageCheck, Printer, Undo2 } from "lucide-react";
 import { labelAndShip, packOrder, revertOrder, type FormState } from "@/app/actions";
@@ -8,7 +8,7 @@ import { SubmitButton } from "@/components/submit-button";
 import { Notice } from "@/components/ui";
 import { PickList } from "@/components/pick-list";
 
-type Item = { id: string; sku: string; name: string; quantity: number; location: string | null; stock: number | null };
+type Item = { id: string; sku: string; name: string; quantity: number; location: string | null; stock: number | null; barcode: string | null };
 type Option = { value: string; label: string; group: string };
 
 export function Station(props: {
@@ -19,8 +19,9 @@ export function Station(props: {
   weight: number;
   nextHref: string;
   prevHref: string | null;
+  blocked: boolean;
 }) {
-  const { order, items, options, defaultValue, weight, nextHref, prevHref } = props;
+  const { order, items, options, defaultValue, weight, nextHref, prevHref, blocked } = props;
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const packed = order.status === "PACKED";
@@ -35,10 +36,12 @@ export function Station(props: {
   }, undefined);
 
 
+  const [packError, setPackError] = useState<string | null>(null);
   const pack = () =>
     startTransition(async () => {
-      await packOrder(order.id);
-      router.push(nextHref);
+      const r = await packOrder(order.id);
+      if (r?.error) setPackError(r.error);
+      else router.push(nextHref);
     });
 
   return (
@@ -62,14 +65,16 @@ export function Station(props: {
 
       <div className="space-y-4 xl:col-span-2">
         <div className="glass space-y-4 p-6">
+          {blocked && <p className="text-center text-sm font-medium text-amber-600">Valida los productos marcados arriba para poder embalar.</p>}
           {!packed && (
-            <button type="button" onClick={pack} disabled={pending} className="btn-primary w-full py-4 text-base">
+            <button type="button" onClick={pack} disabled={pending || blocked} className="btn-primary w-full py-4 text-base">
               <PackageCheck className="h-5 w-5" /> {pending ? "Guardando…" : "Embalado · siguiente"} <ArrowRight className="h-5 w-5" />
             </button>
           )}
-          {!packed && <p className="text-center text-xs text-ink-400">Toca cada producto al cogerlo para ir marcándolo.</p>}
+          {packError && <Notice tone="error">{packError}</Notice>}
+          {!packed && <p className="text-center text-xs text-ink-400">Toca o escanea cada producto al cogerlo para ir marcándolo.</p>}
 
-          <form action={shipAction} className="space-y-3 rounded-2xl border border-line bg-white/60 p-4">
+          <form action={shipAction} className={blocked ? "pointer-events-none space-y-3 rounded-2xl border border-line bg-white/60 p-4 opacity-50" : "space-y-3 rounded-2xl border border-line bg-white/60 p-4"}>
             <div className="text-sm font-semibold text-ink-900">{packed ? "Crear etiqueta y enviar" : "O embalar y crear la etiqueta ya"}</div>
             <select name="method" defaultValue={defaultValue} className="input" aria-label="Envío">
               {[...new Set(options.map((o) => o.group))].map((g) => (

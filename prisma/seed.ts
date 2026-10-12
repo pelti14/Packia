@@ -109,7 +109,7 @@ async function main() {
       },
     });
     for (const [sku, name, location, stock] of c.products) {
-      await db.product.create({ data: { clientId: client.id, storeId: store.id, sku, name, location, stock, lowStockAt: 10, weightGrams: int(80, 900) } });
+      await db.product.create({ data: { clientId: client.id, storeId: store.id, sku, name, location, stock, lowStockAt: 10, weightGrams: int(80, 900), barcode: `84${int(10000000000, 99999999999)}`, validatedAt: new Date(), validatedBy: "Demo" } });
     }
 
     let number = c.store.start;

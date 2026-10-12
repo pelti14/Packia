@@ -13,6 +13,8 @@ import { BackLink, Card, CardHeader, Notice, PlatformBadge, Pill, StatusBadge } 
 import { SubmitButton } from "@/components/submit-button";
 import { ShipForm } from "./ship-form";
 import { PickList } from "@/components/pick-list";
+import { BlockersNotice } from "@/components/blockers-notice";
+import { orderBlockers } from "@/lib/validation";
 
 
 export default async function OrderPage({ params }: { params: Promise<{ id: string }> }) {
@@ -32,6 +34,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   const u = urgency(order.placedAt);
 
   const shipping = staff && status === "PACKED" ? await shippingOptionsFor(order.client) : null;
+  const blockers = staff && open ? await orderBlockers(order) : [];
 
   return (
     <>
@@ -94,7 +97,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
             showStock={open}
             items={[...order.items]
               .sort((a, b) => (bySku.get(a.sku)?.location ?? "ZZ").localeCompare(bySku.get(b.sku)?.location ?? "ZZ"))
-              .map((i) => ({ id: i.id, sku: i.sku, name: i.name, quantity: i.quantity, location: bySku.get(i.sku)?.location ?? null, stock: bySku.get(i.sku)?.stock ?? null }))}
+              .map((i) => ({ id: i.id, sku: i.sku, name: i.name, quantity: i.quantity, location: bySku.get(i.sku)?.location ?? null, stock: bySku.get(i.sku)?.stock ?? null, barcode: bySku.get(i.sku)?.barcode ?? null }))}
           />
         </Card>
 
@@ -137,15 +140,21 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                 </div>
               ) : !staff ? (
                 <Notice>{status === "CANCELLED" ? "Pedido cancelado en la tienda." : "En preparación en el almacén."}</Notice>
-              ) : status === "PACKED" ? (
-                <>
+              ) : null}
+
+              {staff && <BlockersNotice blockers={blockers} returnTo={`/salida/${order.id}`} />}
+
+              {status === "SHIPPED" || !staff ? null : status === "PACKED" ? (
+                blockers.length ? null : <>
                   {shipping?.error && <Notice tone="error">Sendcloud no disponible: {shipping.error}</Notice>}
                   <ShipForm orderId={order.id} weightGrams={await estimateWeight(order)} options={shipping!.options} defaultValue={shipping!.defaultValue} />
                 </>
               ) : status !== "CANCELLED" ? (
-                <form action={packOrder.bind(null, order.id)}>
-                  <SubmitButton className="w-full"><PackageOpen className="h-4 w-4" /> Marcar como embalado</SubmitButton>
-                </form>
+                blockers.length ? null : (
+                  <form action={async () => { "use server"; await packOrder(order.id); }}>
+                    <SubmitButton className="w-full"><PackageOpen className="h-4 w-4" /> Marcar como embalado</SubmitButton>
+                  </form>
+                )
               ) : (
                 <Notice tone="error">Pedido cancelado en la tienda. No preparar.</Notice>
               )}

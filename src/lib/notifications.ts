@@ -38,7 +38,7 @@ export async function markNotificationsSeen(user: CurrentUser) {
 }
 
 export type Badge = { count: number; tone: "green" | "red" } | null;
-export type Badges = Record<"salida" | "recepcion" | "devoluciones" | "tiendas", Badge>;
+export type Badges = Record<"salida" | "recepcion" | "devoluciones" | "tiendas" | "inventario", Badge>;
 
 /**
  * Numeritos del menú. Rojo = urgente (retrasos, errores); verde = tareas normales pendientes.
@@ -47,14 +47,18 @@ export async function getBadges(user: CurrentUser): Promise<Badges> {
   const scope = clientScope(user);
   const today = startOfDay();
   const threeDaysAgo = new Date(Date.now() - 3 * 86_400_000);
-  const [open, inbound, inboundLate, returns, returnsLate, storeErrors] = await Promise.all([
-    db.order.findMany({ where: { ...scope, status: { in: ["PENDING", "PICKING", "PACKED"] } }, select: { placedAt: true } }),
+  const [open, inbound, inboundLate, returns, returnsLate, storeErrors, toValidate] = await Promise.all([
+    db.order.findMany({ where: { ...scope, status: { in: ["PENDING", "PICKING", "PACKED"] } }, select: { placedAt: true, clientId: true, items: { select: { sku: true } } } }),
     db.inbound.count({ where: { ...scope, status: "EXPECTED" } }),
     db.inbound.count({ where: { ...scope, status: "EXPECTED", expectedAt: { lt: today } } }),
     db.return.count({ where: { ...scope, status: { in: ["ANNOUNCED", "RECEIVED"] } } }),
     db.return.count({ where: { ...scope, status: "RECEIVED", receivedAt: { lt: threeDaysAgo } } }),
     user.role === "CLIENT" ? Promise.resolve(0) : db.store.count({ where: { lastSyncError: { not: null } } }),
+    user.role === "CLIENT" ? Promise.resolve([]) : db.product.findMany({ where: { validatedAt: null }, select: { clientId: true, sku: true } }),
   ]);
+  // Rojo si algún pedido abierto está bloqueado por un producto sin validar.
+  const pendingKeys = new Set(toValidate.map((p) => `${p.clientId}|${p.sku}`));
+  const blocking = open.some((o) => o.items.some((i) => pendingKeys.has(`${o.clientId}|${i.sku}`)));
   const due = open.filter((o) => urgency(o.placedAt) !== "LATER");
   const overdue = due.filter((o) => urgency(o.placedAt) === "OVERDUE").length;
   const badge = (count: number, red: boolean): Badge => (count > 0 ? { count, tone: red ? "red" : "green" } : null);
@@ -63,5 +67,6 @@ export async function getBadges(user: CurrentUser): Promise<Badges> {
     recepcion: badge(inbound, inboundLate > 0),
     devoluciones: badge(returns, returnsLate > 0),
     tiendas: badge(storeErrors, true),
+    inventario: badge(toValidate.length, blocking),
   };
 }
