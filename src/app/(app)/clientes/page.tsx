@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Plug, Users } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { eur } from "@/lib/format";
+import { eur, formatDateOnly } from "@/lib/format";
+import { billableFrom } from "@/lib/billing";
 import { startOfMonth } from "@/lib/format";
 import { PLANS, type Plan } from "@/lib/types";
 import { Card, CardHeader, EmptyState, PageHeader, PlatformBadge, SearchBar } from "@/components/ui";
@@ -43,9 +44,16 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
                       <div className="text-xs text-ink-400">{c.contactEmail ?? "Sin email"}</div>
                     </div>
                   </div>
-                  <span className="rounded-full bg-brand-50 px-2.5 py-1 text-[11px] font-semibold text-brand-600 ring-1 ring-brand-100">
-                    {PLANS[c.plan as Plan]?.label ?? c.plan}
-                  </span>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="rounded-full bg-brand-50 px-2.5 py-1 text-[11px] font-semibold text-brand-600 ring-1 ring-brand-100">
+                      {PLANS[c.plan as Plan]?.label ?? c.plan}
+                    </span>
+                    {billableFrom(c) > new Date() && (
+                      <span className="rounded-full bg-aqua-50 px-2.5 py-1 text-[11px] font-semibold text-aqua-600 ring-1 ring-aqua-500/25">
+                        Prueba hasta {formatDateOnly(new Date(billableFrom(c).getTime() - 86_400_000))}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mt-5 flex items-baseline justify-between text-sm">

@@ -20,7 +20,7 @@ const OPERATIONS: Item[] = [
   { href: "/recepcion", label: "Recepción", icon: PackagePlus, roles: ALL, badge: "recepcion" },
   { href: "/devoluciones", label: "Devoluciones", icon: RotateCcw, roles: ALL, badge: "devoluciones" },
   { href: "/inventario", label: "Inventario", icon: Boxes, roles: ALL },
-  { href: "/clientes-tienda", label: "Clientes tienda", icon: Contact, roles: ALL },
+  { href: "/clientes-tienda", label: "Clientes tienda", icon: Contact, roles: ["ADMIN", "STAFF"] },
 ];
 
 const BUSINESS: Item[] = [

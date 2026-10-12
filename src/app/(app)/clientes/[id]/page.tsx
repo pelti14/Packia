@@ -1,6 +1,10 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { dayKey } from "@/lib/schedule";
+import { billableFrom } from "@/lib/billing";
+import { formatDateOnly } from "@/lib/format";
+import { Notice } from "@/components/ui";
 import { BackLink, PageHeader } from "@/components/ui";
 import { ClientForm } from "./client-form";
 import { ShippingForm } from "./shipping-form";
@@ -18,6 +22,9 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
     <>
       <BackLink href="/clientes">Clientes</BackLink>
       <PageHeader eyebrow="Cliente" title={c.name} description="Estos importes se usan para calcular su factura mensual." />
+      {billableFrom(c) > new Date() && (
+        <div className="mb-6"><Notice>En periodo de prueba hasta el {formatDateOnly(new Date(billableFrom(c).getTime() - 86_400_000))}. Se empieza a facturar el {formatDateOnly(billableFrom(c))}.</Notice></div>
+      )}
       <ClientForm
         clientId={c.id}
         initial={{
@@ -30,6 +37,8 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
           monthlyFee: euros(c.monthlyFeeCents),
           extraOrderFee: euros(c.extraOrderFeeCents),
           returnFee: euros(c.returnFeeCents),
+          serviceStartAt: dayKey(c.serviceStartAt ?? c.createdAt),
+          trialWeeks: String(c.trialWeeks),
         }}
       />
       <div className="mt-6">

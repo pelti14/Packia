@@ -91,6 +91,9 @@ async function main() {
         name: c.name, contactEmail: c.email, plan: c.plan, planOrders: c.planOrders,
         monthlyFeeCents: c.fee, extraOrderFeeCents: c.extra, returnFeeCents: 150,
         defaultShipping: c.name.startsWith("Lumi") ? "packia:GLS" : c.name.startsWith("Nordik") ? "packia:SEUR" : null,
+        // Lumière y Nordik llevan meses; Huellas empezó hace 20 días con 2 semanas de prueba.
+        serviceStartAt: new Date(today.getTime() - (c.name.startsWith("Huellas") ? 20 : 90) * 86_400_000),
+        trialWeeks: c.name.startsWith("Huellas") ? 2 : 0,
         taxId: `B${int(10000000, 99999999)}`, billingAddress: `${pick(STREETS)}, ${int(1, 90)}\n${pick(CITIES)[1]} ${pick(CITIES)[0]}`,
       },
     });

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { assertRole } from "@/lib/auth";
-import { issueInvoice } from "@/lib/billing";
+import { issueAllInvoices, issueInvoice } from "@/lib/billing";
 import { notify } from "@/lib/notifications";
 import { eur } from "@/lib/format";
 import { monthKey } from "@/lib/schedule";
@@ -20,4 +20,10 @@ export async function setInvoicePaid(invoiceId: string, paid: boolean) {
   await assertRole(["ADMIN"]);
   await db.invoice.update({ where: { id: invoiceId }, data: { status: paid ? "PAID" : "ISSUED", paidAt: paid ? new Date() : null } });
   revalidatePath("/facturacion", "layout");
+}
+
+export async function issueAllAction(month: string) {
+  await assertRole(["ADMIN"]);
+  await issueAllInvoices(month);
+  revalidatePath("/facturacion");
 }

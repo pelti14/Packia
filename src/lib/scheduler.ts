@@ -1,4 +1,5 @@
 import { syncAllStores } from "@/lib/sync";
+import { maybeAutoInvoice } from "@/lib/billing";
 
 const g = globalThis as unknown as { __packiaScheduler?: NodeJS.Timeout };
 
@@ -15,6 +16,8 @@ export function startScheduler() {
     try {
       const r = await syncAllStores();
       if (r.ran && (r.orders || r.errors)) console.log(`[sync] ${r.stores} tiendas · ${r.orders} pedidos nuevos · ${r.errors} errores`);
+      const inv = await maybeAutoInvoice();
+      if (inv?.issued.length) console.log(`[facturación] ${inv.issued.length} facturas emitidas automáticamente`);
     } catch (err) {
       // Normal antes de completar /setup (sin tablas): no hacemos ruido.
       if (!/does not exist|P2021/.test(String(err))) console.error("[sync]", err);

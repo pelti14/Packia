@@ -16,6 +16,7 @@ const cell = (v: unknown) => {
 export async function GET(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  if (user.role === "CLIENT") return NextResponse.json({ error: "No disponible" }, { status: 403 });
   const sp = new URL(req.url).searchParams;
   const where = customerWhere(user, { client: sp.get("client") ?? undefined, store: sp.get("store") ?? undefined, q: sp.get("q") ?? undefined });
   const rows = await db.storeCustomer.findMany({ where, include: { store: true, client: true }, orderBy: { lastOrderAt: "desc" } });

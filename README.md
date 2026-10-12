@@ -10,17 +10,17 @@ Documentación de negocio en [`docs/`](docs/): [cliente ideal](docs/cliente-idea
 | --- | --- |
 | **Panel** | Pedidos que tienen que salir hoy, retrasados, enviados hoy, % a tiempo, pedidos de los últimos 14 días, cuota de pedidos de cada cliente, recepciones previstas y stock bajo. |
 | **Salida** | Tarjetas grandes por cliente (de 3 en 3) para seleccionar uno, varios o todos y entrar en el **modo preparación**: pedido a pedido, de más urgente a menos, marcando productos, embalando y creando la etiqueta con el repartidor por defecto del cliente. Debajo, la lista completa con pestañas (*Para hoy · Retrasados · Sin preparar · Preparando · Listos para etiqueta · Enviados*), avance o **vuelta a pendiente** en bloque e impresión de etiquetas en un solo PDF. Corte a las 14:00 en días laborables (hora de Madrid). |
-| **Ficha de pedido** | Lista de picking por ubicación. **Crear etiqueta y enviar** (Sendcloud o etiqueta interna Packia) o registrar un seguimiento hecho fuera. El seguimiento se devuelve a la tienda. |
+| **Ficha de pedido** | Lista de picking por ubicación que se marca producto a producto al cogerlo (se recuerda en el navegador). **Crear etiqueta y enviar** (Sendcloud o etiqueta interna Packia) o registrar un seguimiento hecho fuera. El seguimiento se devuelve a la tienda. |
 | **Recepción** | Avisos de entrada de mercancía (los puede crear el cliente). Al llegar se cuentan las unidades recibidas y dañadas, y se asigna ubicación. El stock sube solo. |
 | **Devoluciones** | Se registran sobre un pedido enviado y siguen el flujo *Anunciada → Recibida → Procesada*. Al procesar, lo vendible vuelve al stock y lo dañado se aparta. |
 | **Inventario** | Stock, ubicación, mínimo y peso por referencia, con buscador por producto, SKU, ubicación o cliente. |
 | **Clientes tienda** | Los compradores de cada tienda, guardados solos con cada pedido. Búsqueda y **exportación a CSV** (Excel). |
 | **Notificaciones** | Campana con avisos que saltan al momento: pedidos nuevos, cancelados por la tienda, mercancía avisada o recibida, devoluciones, stock bajo, facturas y errores de sincronización. El menú muestra contadores **verdes** (tareas pendientes) o **rojos** (urgente: retrasos, errores). |
-| **Facturación** | Uso del mes por cliente: pedidos enviados frente a los incluidos, exceso y devoluciones. Emisión de facturas mensuales (PK-AAAA-0001) con IVA, imprimibles en PDF, y control de cobro. |
+| **Facturación** | Uso del mes por cliente: pedidos enviados frente a los incluidos, exceso y devoluciones. Desplegable para ir a cualquier mes (36 atrás). **Semanas de prueba gratis** por cliente y **prorrateo** del primer mes de pago. Botón **«Emitir las N facturas»** del mes y **facturación automática** del mes anterior los días 1–5 (activable en Ajustes). Facturas PK-AAAA-0001 con IVA, imprimibles en PDF, y control de cobro. |
 | **Clientes** | Plan y tarifas de cada cliente (cuota, pedidos incluidos, precio por pedido adicional y por devolución), datos fiscales, **repartidor por defecto** y, opcionalmente, **su propia cuenta de Sendcloud** con sus contratos de agencia. |
 | **Sincronización** | Además de los webhooks, Packia consulta todas las tiendas **cada minuto** (productos cada 30 min). Respaldo opcional con cron externo en `/api/cron/sync?key=CRON_SECRET`. |
 | **Tiendas** | Conexión con Shopify y WooCommerce, sincronización y webhooks. |
-| **Usuarios** | Alta de usuarios y roles. |
+| **Usuarios** | Alta y edición de usuarios: nombre, email, rol, empresa y contraseña. |
 | **Ajustes** | Datos fiscales, remitente de las etiquetas, claves de Sendcloud y estado del sistema (incluido el botón para actualizar la base de datos). |
 
 ### Roles
@@ -29,7 +29,7 @@ Documentación de negocio en [`docs/`](docs/): [cliente ideal](docs/cliente-idea
 | --- | --- |
 | **Administrador** | Todo, incluida facturación, clientes, tiendas y usuarios. |
 | **Almacén** | Salida, recepción, devoluciones e inventario. Puede sincronizar tiendas. No ve facturación. |
-| **Cliente** | Solo los datos de **su** empresa: pedidos, stock, recepciones (puede avisar de entradas), devoluciones (puede registrarlas) y sus facturas. |
+| **Cliente** | Solo los datos de **su** empresa: pedidos, stock, recepciones (puede avisar de entradas), devoluciones (puede registrarlas) y sus facturas. No ve Clientes tienda. |
 
 ### Etiquetas de envío
 

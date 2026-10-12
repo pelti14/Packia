@@ -42,6 +42,10 @@ model Client {
   monthlyFeeCents    Int       @default(48000)
   extraOrderFeeCents Int       @default(140)
   returnFeeCents     Int       @default(150)
+  /// Día en que empieza el servicio (si falta, se usa createdAt).
+  serviceStartAt     DateTime?
+  /// Semanas de prueba gratis desde serviceStartAt. Después se factura y el primer mes se prorratea.
+  trialWeeks         Int       @default(0)
   /// Envío por defecto: "packia:GLS" (etiqueta interna) o "sendcloud:1402" (método de Sendcloud).
   defaultShipping    String?
   /// Cuenta de Sendcloud propia del cliente, con sus contratos de agencia (cifrado). Si está vacío se usa la de Packia.
@@ -278,6 +282,8 @@ model AppSettings {
   sendcloudPublicKey String?
   /// Cifrado (AES-256-GCM).
   sendcloudSecretKey String?
+  /// Emitir solo las facturas del mes anterior los días 1-5 de cada mes.
+  autoInvoice        Boolean  @default(true)
   updatedAt          DateTime @updatedAt
 }
 

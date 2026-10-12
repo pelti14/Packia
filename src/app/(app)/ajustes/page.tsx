@@ -34,7 +34,7 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
 
       <div className="grid items-start gap-6 2xl:grid-cols-3">
         <div className="2xl:col-span-2">
-          <SettingsForm initial={initial} sendcloudSaved={Boolean(settings?.sendcloudPublicKey && settings?.sendcloudSecretKey)} />
+          <SettingsForm initial={initial} sendcloudSaved={Boolean(settings?.sendcloudPublicKey && settings?.sendcloudSecretKey)} autoInvoice={settings?.autoInvoice ?? true} />
         </div>
         <Card>
           <CardHeader title="Estado del sistema" />

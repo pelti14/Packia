@@ -9,7 +9,7 @@ import { Notice } from "@/components/ui";
 
 type Values = Record<string, string>;
 
-export function SettingsForm({ initial, sendcloudSaved }: { initial: Values; sendcloudSaved: boolean }) {
+export function SettingsForm({ initial, sendcloudSaved, autoInvoice }: { initial: Values; sendcloudSaved: boolean; autoInvoice: boolean }) {
   const [state, action] = useActionState<FormState, FormData>(saveSettings, undefined);
   const [testState, testAction, testing] = useActionState<FormState, FormData>(testSendcloud, undefined);
   const formRef = useRef<HTMLFormElement>(null);
@@ -48,6 +48,16 @@ export function SettingsForm({ initial, sendcloudSaved }: { initial: Values; sen
           <Field id="senderPhone" label="Teléfono" initial={values} />
           <Field id="senderEmail" label="Email" initial={values} type="email" />
         </div>
+      </section>
+
+      <section className="glass flex items-start justify-between gap-4 p-6 xl:col-span-2">
+        <div>
+          <h2 className="text-base font-semibold">Facturación automática</h2>
+          <p className="text-xs text-ink-500">Del día 1 al 5 de cada mes, Packia emite sola las facturas del mes anterior y avisa a cada cliente. Si la desactivas, emítelas con el botón de Facturación.</p>
+        </div>
+        <label className="flex shrink-0 cursor-pointer items-center gap-2 text-sm font-medium text-ink-700">
+          <input type="checkbox" name="autoInvoice" defaultChecked={autoInvoice} className="h-5 w-5 accent-brand-500" /> Activada
+        </label>
       </section>
 
       <section className="glass space-y-4 p-6 xl:col-span-2">

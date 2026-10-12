@@ -1,4 +1,5 @@
-import { Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Pencil, Trash2 } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireUser, ROLE_LABEL, type Role } from "@/lib/auth";
 import { deleteUser } from "@/app/actions";
@@ -11,7 +12,10 @@ const TONE = { ADMIN: "brand", STAFF: "aqua", CLIENT: "ink" } as const;
 export default async function UsersPage() {
   const me = await requireUser(["ADMIN"]);
   const [profiles, clients] = await Promise.all([
-    db.profile.findMany({ include: { client: true }, orderBy: [{ role: "asc" }, { email: "asc" }] }),
+    db.profile.findMany({
+      select: { id: true, email: true, name: true, role: true, createdAt: true, client: { select: { name: true } } },
+      orderBy: [{ role: "asc" }, { email: "asc" }],
+    }),
     db.client.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
 
@@ -34,13 +38,17 @@ export default async function UsersPage() {
               {profiles.map((p) => (
                 <tr key={p.id}>
                   <td className="cell">
-                    <div className="font-medium text-ink-900">{p.name ?? p.email}</div>
+                    <Link href={`/usuarios/${p.id}`} className="font-medium text-ink-900 hover:text-brand-600">{p.name ?? p.email}</Link>
                     <div className="text-xs text-ink-400">{p.email}</div>
                   </td>
                   <td className="cell"><Pill tone={TONE[p.role as Role]}>{ROLE_LABEL[p.role as Role]}</Pill></td>
                   <td className="cell text-ink-700">{p.client?.name ?? "—"}</td>
                   <td className="cell text-ink-500">{formatDateOnly(p.createdAt)}</td>
                   <td className="cell text-right">
+                    <div className="flex justify-end gap-1">
+                    <Link href={`/usuarios/${p.id}`} className="rounded-lg p-2 text-ink-400 transition hover:bg-brand-50 hover:text-brand-600" aria-label={`Editar ${p.email}`}>
+                      <Pencil className="h-4 w-4" />
+                    </Link>
                     {p.id !== me.id && (
                       <form action={deleteUser.bind(null, p.id)}>
                         <button className="rounded-lg p-2 text-ink-400 transition hover:bg-rose-50 hover:text-rose-500" aria-label={`Eliminar ${p.email}`}>
@@ -48,6 +56,7 @@ export default async function UsersPage() {
                         </button>
                       </form>
                     )}
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -8,7 +8,9 @@ import { monthKey, monthRange, shiftMonth } from "@/lib/schedule";
 import { PLANS, type Plan } from "@/lib/types";
 import { Card, CardHeader, EmptyState, PageHeader, Pill, StatCard } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
-import { issueInvoiceAction, setInvoicePaid } from "./actions";
+import { issueAllAction, issueInvoiceAction, setInvoicePaid } from "./actions";
+import { MonthPicker } from "./month-picker";
+import { FileStack } from "lucide-react";
 
 export default async function FacturacionPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
   const user = await requireUser(["ADMIN", "CLIENT"]);
@@ -27,6 +29,7 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
     db.invoice.findMany({ where: scope, include: { client: true }, orderBy: { issuedAt: "desc" }, take: 50 }),
   ]);
   const invoiceOf = new Map(monthInvoices.map((i) => [i.clientId, i]));
+  const pendingToIssue = usages.filter((u) => !invoiceOf.has(u.client.id) && u.subtotalCents > 0).length;
   const totalSubtotal = usages.reduce((s, u) => s + u.subtotalCents, 0);
   const totalShipped = usages.reduce((s, u) => s + u.shippedOrders, 0);
   const pendingCents = invoices.filter((i) => i.status === "ISSUED").reduce((s, i) => s + i.totalCents, 0);
@@ -36,13 +39,16 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
       <PageHeader
         eyebrow="Negocio"
         title="Facturación"
-        description="Cuota fija del plan, pedidos por encima de lo incluido y devoluciones procesadas. Los meses cerrados se facturan con IVA."
+        description="Cuota del plan, pedidos por encima de lo incluido y devoluciones. Las semanas de prueba no se cobran y el primer mes se prorratea. Las facturas del mes anterior se emiten solas del día 1 al 5 (se puede cambiar en Ajustes)."
         actions={
           <div className="glass flex items-center gap-1 rounded-xl p-1">
             <Link href={`/facturacion?month=${shiftMonth(month, -1)}`} className="rounded-lg p-2 text-ink-500 hover:bg-white hover:text-brand-600" aria-label="Mes anterior">
               <ChevronLeft className="h-4 w-4" />
             </Link>
-            <span className="min-w-36 text-center text-sm font-semibold text-ink-900">{formatMonth(start)}</span>
+            <MonthPicker
+              value={month}
+              options={Array.from({ length: 36 }, (_, i) => shiftMonth(current, -i)).map((m) => ({ value: m, label: formatMonth(monthRange(m).start) }))}
+            />
             {month < current ? (
               <Link href={`/facturacion?month=${shiftMonth(month, 1)}`} className="rounded-lg p-2 text-ink-500 hover:bg-white hover:text-brand-600" aria-label="Mes siguiente">
                 <ChevronRight className="h-4 w-4" />
@@ -61,7 +67,17 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
       </div>
 
       <Card className="mb-6 overflow-hidden">
-        <CardHeader title="Cuota de pedidos por cliente" subtitle={closed ? "Mes cerrado: listo para facturar" : "Mes en curso: se actualiza con cada envío"} />
+        <CardHeader
+          title="Cuota de pedidos por cliente"
+          subtitle={closed ? "Mes cerrado: listo para facturar" : "Mes en curso: se actualiza con cada envío. Se factura al cerrar el mes."}
+          action={
+            closed && admin && pendingToIssue > 0 ? (
+              <form action={issueAllAction.bind(null, month)}>
+                <SubmitButton><FileStack className="h-4 w-4" /> Emitir las {pendingToIssue} facturas</SubmitButton>
+              </form>
+            ) : undefined
+          }
+        />
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="border-b border-line/70 bg-white/40">
@@ -87,6 +103,9 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
                     <td className="cell text-ink-700">
                       {PLANS[u.client.plan as Plan]?.label ?? u.client.plan}
                       <div className="text-xs text-ink-400">{eur(u.client.monthlyFeeCents)}/mes</div>
+                      {u.status === "TRIAL" && <div className="mt-1"><Pill tone="aqua">En prueba hasta {formatDateOnly(new Date(u.billableFrom.getTime() - 86_400_000))}</Pill></div>}
+                      {u.status === "PRORATED" && <div className="mt-1"><Pill tone="amber">Prorrateado {Math.round(u.fraction * 100)}% · desde {formatDateOnly(u.billableFrom)}</Pill></div>}
+                      {u.status === "NOT_STARTED" && <div className="mt-1"><Pill tone="ink">Aún no era cliente</Pill></div>}
                     </td>
                     <td className="cell">
                       <div className="mono text-sm"><b className="text-ink-900">{u.shippedOrders}</b> <span className="text-ink-400">/ {u.includedOrders}</span></div>
@@ -103,6 +122,8 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
                       <td className="cell text-right">
                         {inv ? (
                           <Link href={`/facturacion/${inv.id}`} className="mono text-sm font-semibold text-brand-600 hover:underline">{inv.number}</Link>
+                        ) : u.subtotalCents <= 0 ? (
+                          <span className="text-xs text-ink-400">Nada que facturar</span>
                         ) : admin ? (
                           <form action={issueInvoiceAction.bind(null, u.client.id, month)}>
                             <SubmitButton variant="ghost" className="px-3 py-1.5">Emitir factura</SubmitButton>

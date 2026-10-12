@@ -10,7 +10,7 @@ const PAGE = 200;
 
 export default async function ClientesTiendaPage({ searchParams }: { searchParams: Promise<{ client?: string; store?: string; q?: string }> }) {
   const filters = await searchParams;
-  const user = await requireUser();
+  const user = await requireUser(["ADMIN", "STAFF"]);
   const staff = isStaff(user);
 
   // Primera vez tras actualizar: se rellena a partir de los pedidos que ya había.

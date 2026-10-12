@@ -32,7 +32,8 @@ export async function saveSettings(_: FormState, form: FormData): Promise<FormSt
     if (sk) data.sendcloudSecretKey = encrypt(sk);
   }
 
-  await db.appSettings.upsert({ where: { id: "default" }, create: { id: "default", ...data }, update: data });
+  const autoInvoice = form.get("autoInvoice") === "on";
+  await db.appSettings.upsert({ where: { id: "default" }, create: { id: "default", ...data, autoInvoice }, update: { ...data, autoInvoice } });
   revalidatePath("/", "layout");
   const values = Object.fromEntries(TEXT_FIELDS.map((f) => [f, data[f] ?? ""]));
   return { success: "Ajustes guardados", values };

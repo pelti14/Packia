@@ -29,17 +29,31 @@ function cents(value: string): number | null {
 
 // ─── Clientes ───────────────────────────────────────────────
 
+/** "2026-10-12" → mediodía de ese día (evita saltos de zona horaria). */
+function parseDay(v: string): Date | null {
+  return /^\d{4}-\d{2}-\d{2}$/.test(v) ? new Date(`${v}T12:00:00`) : null;
+}
+
+function parseTrialWeeks(v: string): number | null {
+  const n = Number(v || "0");
+  return Number.isInteger(n) && n >= 0 && n <= 26 ? n : null;
+}
+
 export async function createClient(_: FormState, form: FormData): Promise<FormState> {
   await assertRole(["ADMIN"]);
   const name = str(form.get("name"));
   const plan = (str(form.get("plan")) || "ARRANQUE") as Plan;
-  const values = keep(form, ["name", "contactEmail", "plan"]);
+  const values = keep(form, ["name", "contactEmail", "plan", "serviceStartAt", "trialWeeks"]);
   if (!name) return { error: "El nombre es obligatorio", values };
   if (!(plan in PLANS)) return { error: "Plan no válido", values };
+  const trialWeeks = parseTrialWeeks(values.trialWeeks);
+  if (trialWeeks === null) return { error: "Semanas de prueba no válidas (0 a 26)", values };
   const p = PLANS[plan];
   await db.client.create({
     data: {
       name,
+      serviceStartAt: parseDay(values.serviceStartAt) ?? new Date(),
+      trialWeeks,
       contactEmail: str(form.get("contactEmail")) || null,
       plan,
       planOrders: p.orders,
@@ -54,7 +68,7 @@ export async function createClient(_: FormState, form: FormData): Promise<FormSt
 
 export async function updateClient(clientId: string, _: FormState, form: FormData): Promise<FormState> {
   await assertRole(["ADMIN"]);
-  const fields = ["name", "contactEmail", "taxId", "billingAddress", "plan", "planOrders", "monthlyFee", "extraOrderFee", "returnFee"];
+  const fields = ["name", "contactEmail", "taxId", "billingAddress", "plan", "planOrders", "monthlyFee", "extraOrderFee", "returnFee", "serviceStartAt", "trialWeeks"];
   const values = keep(form, fields);
   const planOrders = Number(values.planOrders);
   const monthlyFeeCents = cents(values.monthlyFee);
@@ -64,6 +78,10 @@ export async function updateClient(clientId: string, _: FormState, form: FormDat
   if (!(values.plan in PLANS)) return { error: "Plan no válido", values };
   if (!Number.isInteger(planOrders) || planOrders < 0) return { error: "Pedidos incluidos no válidos", values };
   if (monthlyFeeCents === null || extraOrderFeeCents === null || returnFeeCents === null) return { error: "Revisa los importes", values };
+  const trialWeeks = parseTrialWeeks(values.trialWeeks);
+  if (trialWeeks === null) return { error: "Semanas de prueba no válidas (0 a 26)", values };
+  const serviceStartAt = parseDay(values.serviceStartAt);
+  if (!serviceStartAt) return { error: "Fecha de alta no válida", values };
 
   await db.client.update({
     where: { id: clientId },
@@ -77,6 +95,8 @@ export async function updateClient(clientId: string, _: FormState, form: FormDat
       monthlyFeeCents,
       extraOrderFeeCents,
       returnFeeCents,
+      trialWeeks,
+      serviceStartAt,
     },
   });
   revalidatePath("/", "layout");
@@ -371,6 +391,41 @@ export async function createUser(_: FormState, form: FormData): Promise<FormStat
   });
   revalidatePath("/usuarios");
   return { success: `Usuario ${email} creado. Comparte la contraseña temporal por un canal seguro.` };
+}
+
+export async function updateUser(profileId: string, _: FormState, form: FormData): Promise<FormState> {
+  const me = await assertRole(["ADMIN"]);
+  const values = keep(form, ["email", "name", "role", "clientId"]);
+  const email = values.email.toLowerCase();
+  const password = str(form.get("password"));
+  const current = await db.profile.findUnique({ where: { id: profileId }, select: { email: true, role: true } });
+  if (!current) return { error: "Usuario no encontrado", values };
+  if (!email) return { error: "El email es obligatorio", values };
+  if (!["ADMIN", "STAFF", "CLIENT"].includes(values.role)) return { error: "Rol no válido", values };
+  if (values.role === "CLIENT" && !values.clientId) return { error: "Un usuario cliente necesita una empresa", values };
+  if (me.id === profileId && values.role !== "ADMIN") return { error: "No puedes quitarte a ti mismo el rol de administrador", values };
+  if (password && password.length < 8) return { error: "La contraseña nueva debe tener al menos 8 caracteres", values };
+
+  if (email !== current.email || password) {
+    if (email !== current.email && (await db.profile.findUnique({ where: { email }, select: { id: true } }))) {
+      return { error: "Ya hay otro usuario con ese email", values };
+    }
+    const admin = createSupabaseAdmin();
+    const { error } = await admin.auth.admin.updateUserById(profileId, {
+      ...(email !== current.email && { email, email_confirm: true }),
+      ...(password && { password }),
+      user_metadata: { name: values.name },
+    });
+    if (error) return { error: `Supabase: ${error.message}`, values };
+  }
+
+  await db.profile.update({
+    where: { id: profileId },
+    data: { email, name: values.name || null, role: values.role, clientId: values.role === "CLIENT" ? values.clientId : null },
+    select: { id: true },
+  });
+  revalidatePath("/usuarios");
+  return { success: password ? "Usuario actualizado y contraseña cambiada" : "Usuario actualizado", values };
 }
 
 export async function deleteUser(profileId: string) {

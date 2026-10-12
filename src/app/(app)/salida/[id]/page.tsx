@@ -4,7 +4,7 @@ import { clsx } from "clsx";
 import { Check, ExternalLink, MapPin, PackageOpen, Printer, RotateCcw, Truck } from "lucide-react";
 import { db } from "@/lib/db";
 import { canAccessClient, isStaff, requireUser } from "@/lib/auth";
-import { advanceOrder, revertOrder } from "@/app/actions";
+import { packOrder, revertOrder } from "@/app/actions";
 import { estimateWeight, shippingOptionsFor } from "@/lib/labels";
 import { formatDate, parseAddress } from "@/lib/format";
 import { urgency } from "@/lib/schedule";
@@ -12,11 +12,8 @@ import { ORDER_FLOW, STATUS_LABEL, type OrderStatus } from "@/lib/types";
 import { BackLink, Card, CardHeader, Notice, PlatformBadge, Pill, StatusBadge } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { ShipForm } from "./ship-form";
+import { PickList } from "@/components/pick-list";
 
-const NEXT_ACTION: Partial<Record<OrderStatus, string>> = {
-  PENDING: "Empezar picking",
-  PICKING: "Marcar como embalado",
-};
 
 export default async function OrderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -90,30 +87,15 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
 
       <div className="grid items-start gap-6 xl:grid-cols-3">
         <Card className="xl:col-span-2">
-          <CardHeader title="Lista de picking" subtitle={`${order.items.length} líneas · ${units} unidades · ordenadas por ubicación`} />
-          <ul className="divide-y divide-line/60">
-            {[...order.items]
+          <CardHeader title="Lista de picking" subtitle={`${order.items.length} líneas · ${units} unidades · ordenadas por ubicación${staff && open ? " · toca cada producto al cogerlo" : ""}`} />
+          <PickList
+            orderId={order.id}
+            interactive={staff && open}
+            showStock={open}
+            items={[...order.items]
               .sort((a, b) => (bySku.get(a.sku)?.location ?? "ZZ").localeCompare(bySku.get(b.sku)?.location ?? "ZZ"))
-              .map((item) => {
-                const p = bySku.get(item.sku);
-                const short = p && p.stock < item.quantity && open;
-                return (
-                  <li key={item.id} className="flex items-center gap-4 px-5 py-4">
-                    <div className="mono flex h-12 w-20 shrink-0 flex-col items-center justify-center rounded-xl bg-gradient-to-br from-brand-50 to-aqua-50 text-xs font-semibold text-brand-700 ring-1 ring-brand-100">
-                      <MapPin className="mb-0.5 h-3 w-3" />
-                      {p?.location ?? "—"}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate font-medium text-ink-900">{item.name}</div>
-                      <div className="mono text-xs text-ink-400">{item.sku}</div>
-                      {short && <div className="mt-1 text-xs font-medium text-rose-500">Stock insuficiente: quedan {p.stock}</div>}
-                      {!p && <div className="mt-1 text-xs font-medium text-amber-600">SKU no registrado en inventario</div>}
-                    </div>
-                    <div className="font-display text-2xl font-bold text-ink-900">×{item.quantity}</div>
-                  </li>
-                );
-              })}
-          </ul>
+              .map((i) => ({ id: i.id, sku: i.sku, name: i.name, quantity: i.quantity, location: bySku.get(i.sku)?.location ?? null, stock: bySku.get(i.sku)?.stock ?? null }))}
+          />
         </Card>
 
         <div className="space-y-6">
@@ -161,8 +143,8 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                   <ShipForm orderId={order.id} weightGrams={await estimateWeight(order)} options={shipping!.options} defaultValue={shipping!.defaultValue} />
                 </>
               ) : status !== "CANCELLED" ? (
-                <form action={advanceOrder.bind(null, order.id)}>
-                  <SubmitButton className="w-full"><PackageOpen className="h-4 w-4" /> {NEXT_ACTION[status]}</SubmitButton>
+                <form action={packOrder.bind(null, order.id)}>
+                  <SubmitButton className="w-full"><PackageOpen className="h-4 w-4" /> Marcar como embalado</SubmitButton>
                 </form>
               ) : (
                 <Notice tone="error">Pedido cancelado en la tienda. No preparar.</Notice>

@@ -6,7 +6,7 @@ import { PLANS } from "@/lib/types";
 import { SubmitButton } from "@/components/submit-button";
 import { Notice } from "@/components/ui";
 
-type Values = Record<"name" | "contactEmail" | "taxId" | "billingAddress" | "plan" | "planOrders" | "monthlyFee" | "extraOrderFee" | "returnFee", string>;
+type Values = Record<"name" | "contactEmail" | "taxId" | "billingAddress" | "plan" | "planOrders" | "monthlyFee" | "extraOrderFee" | "returnFee" | "serviceStartAt" | "trialWeeks", string>;
 
 export function ClientForm({ clientId, initial }: { clientId: string; initial: Values }) {
   const [state, action] = useActionState<FormState, FormData>(updateClient.bind(null, clientId), undefined);
@@ -36,7 +36,10 @@ export function ClientForm({ clientId, initial }: { clientId: string; initial: V
           <Field id="monthlyFee" label="Cuota mensual (€)" defaultValue={v.monthlyFee} inputMode="decimal" />
           <Field id="extraOrderFee" label="Pedido adicional (€)" defaultValue={v.extraOrderFee} inputMode="decimal" />
           <Field id="returnFee" label="Devolución (€)" defaultValue={v.returnFee} inputMode="decimal" />
+          <Field id="serviceStartAt" label="Fecha de alta" type="date" defaultValue={v.serviceStartAt} />
+          <Field id="trialWeeks" label="Semanas de prueba" type="number" min={0} max={26} defaultValue={v.trialWeeks} />
         </div>
+        <p className="text-xs text-ink-400">La prueba empieza en la fecha de alta y no se cobra. El primer mes de pago se prorratea por días.</p>
         {state?.error && <Notice tone="error">{state.error}</Notice>}
         {state?.success && <Notice tone="success">{state.success}</Notice>}
         <SubmitButton className="w-full">Guardar cambios</SubmitButton>
