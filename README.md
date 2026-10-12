@@ -1,59 +1,88 @@
 # Packia
 
-Software de logística (fulfillment) de Packia: recibe los pedidos de las tiendas **Shopify** y **WooCommerce** de nuestros clientes, organiza la preparación en el almacén y devuelve el número de seguimiento a la tienda.
+Software de logística (fulfillment) de Packia. Recibe los pedidos de las tiendas **Shopify** y **WooCommerce** de nuestros clientes, organiza el almacén (recepción, salida y devoluciones), crea las etiquetas de envío y factura a cada cliente su cuota mensual.
 
 Documentación de negocio en [`docs/`](docs/): [cliente ideal](docs/cliente-ideal.md) y [estrategia de 0 a 10.000 €/mes](docs/estrategia-0-a-10k.md).
 
 ## Qué hace
 
-| Pantalla | Para qué |
+| Sección | Para qué |
 | --- | --- |
-| **Panel** | Pedidos en cola, enviados hoy, % a tiempo, pedidos de los últimos 14 días, uso del plan de cada cliente y stock bajo. Cuenta atrás hasta la hora de corte (14:00). |
-| **Pedidos** | Cola por estados: Pendiente → Preparando → Embalado → Enviado. Búsqueda por número, cliente, destinatario, SKU o seguimiento. |
-| **Ficha de pedido** | Lista de picking ordenada por ubicación, avisos de stock insuficiente, dirección de envío y formulario de envío (agencia + seguimiento). |
-| **Inventario** | Referencias por cliente, stock físico, ubicación y mínimo. El stock se descuenta solo al enviar. |
-| **Clientes** | Marcas, su plan (300 / 600 / 1.000 pedidos) y el uso de este mes. |
-| **Tiendas** | Conectar Shopify o WooCommerce, sincronizar y ver las URLs de webhooks. |
+| **Panel** | Pedidos que tienen que salir hoy, retrasados, enviados hoy, % a tiempo, pedidos de los últimos 14 días, cuota de pedidos de cada cliente, recepciones previstas y stock bajo. |
+| **Salida** | Pestañas *Para hoy · Retrasados · Sin preparar · Preparando · Listos para etiqueta · Enviados*. Corte a las 14:00 en días laborables (hora de Madrid). Avance en bloque e impresión de etiquetas en un solo PDF. |
+| **Ficha de pedido** | Lista de picking por ubicación. **Crear etiqueta y enviar** (Sendcloud o etiqueta interna Packia) o registrar un seguimiento hecho fuera. El seguimiento se devuelve a la tienda. |
+| **Recepción** | Avisos de entrada de mercancía (los puede crear el cliente). Al llegar se cuentan las unidades recibidas y dañadas, y se asigna ubicación. El stock sube solo. |
+| **Devoluciones** | Se registran sobre un pedido enviado y siguen el flujo *Anunciada → Recibida → Procesada*. Al procesar, lo vendible vuelve al stock y lo dañado se aparta. |
+| **Inventario** | Stock, ubicación, mínimo y peso por referencia. |
+| **Facturación** | Uso del mes por cliente: pedidos enviados frente a los incluidos, exceso y devoluciones. Emisión de facturas mensuales (PK-AAAA-0001) con IVA, imprimibles en PDF, y control de cobro. |
+| **Clientes** | Plan y tarifas de cada cliente (cuota, pedidos incluidos, precio por pedido adicional y por devolución) y sus datos fiscales. |
+| **Tiendas** | Conexión con Shopify y WooCommerce, sincronización y webhooks. |
+| **Usuarios** | Alta de usuarios y roles. |
 
-### Integraciones
+### Roles
 
-- **Shopify** (app personalizada, Admin GraphQL API):
-  - Importa los pedidos abiertos sin preparar y las variantes con SKU.
-  - Al enviar, crea el *fulfillment* con el seguimiento y Shopify avisa al cliente final.
-  - Webhooks `orders/*` verificados con HMAC (`X-Shopify-Hmac-Sha256`).
-- **WooCommerce** (REST API v3):
-  - Importa los pedidos en estado `processing` y los productos, incluidas sus variaciones.
-  - Al enviar, pasa el pedido a `completed` y añade una nota para el cliente con el seguimiento.
-  - Webhooks `order.created` y `order.updated` verificados con `X-WC-Webhook-Signature`.
+| Rol | Puede |
+| --- | --- |
+| **Administrador** | Todo, incluida facturación, clientes, tiendas y usuarios. |
+| **Almacén** | Salida, recepción, devoluciones e inventario. Puede sincronizar tiendas. No ve facturación. |
+| **Cliente** | Solo los datos de **su** empresa: pedidos, stock, recepciones (puede avisar de entradas), devoluciones (puede registrarlas) y sus facturas. |
 
-Los pedidos ya importados no se sobrescriben, porque su estado lo lleva el almacén. Solo se marcan como cancelados si la tienda los cancela antes de enviarse.
+### Etiquetas de envío
 
-## Arrancar en local
+- **Sendcloud** (recomendado): con las claves configuradas aparecen los métodos de envío de la cuenta (MRW, GLS, Correos Express, SEUR…). Packia crea el envío, recibe el número de seguimiento y descarga la **etiqueta oficial** de la agencia en A6.
+- **Etiqueta Packia**: etiqueta interna de 10×15 cm con código de barras Code 128, remitente y destinatario. Sirve para pruebas o para agencias que acepten etiquetas propias. **No sustituye a la etiqueta oficial de la agencia.**
 
-Requisitos: Node 20 o superior.
+### Seguridad
 
+- Login con **Supabase Auth**. Todas las páginas exigen sesión, menos `/login` y los webhooks. Cada acción del servidor comprueba el rol del usuario.
+- Los usuarios con rol Cliente solo pueden consultar los datos de su empresa.
+- Los tokens y claves de las tiendas se guardan **cifrados con AES-256-GCM** usando `ENCRYPTION_KEY`.
+- **RLS activado** en todas las tablas: la API pública de Supabase, que funciona con la clave anónima, no puede leer ni escribir nada. La app accede por Prisma.
+- Los webhooks se verifican con la firma HMAC de Shopify o WooCommerce.
+
+## Puesta en marcha con Supabase
+
+### 1. Crear el proyecto
+1. Entra en [supabase.com](https://supabase.com) y crea un proyecto. Elige la región **EU (Frankfurt o Irlanda)** y guarda la contraseña de la base de datos.
+2. **Authentication → Providers → Email**: desactiva *Allow new users to sign up*. Los usuarios los crea un administrador desde Packia.
+3. **Authentication → URL Configuration**: pon en *Site URL* la URL de la app, por ejemplo `https://app.packia.es`, y añade `https://app.packia.es/auth/callback` en *Redirect URLs*.
+
+### 2. Variables de entorno
+Copia `.env.example` a `.env` y rellénalo:
+
+| Variable | Dónde está |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Project Settings → API |
+| `SUPABASE_SERVICE_ROLE_KEY` | Project Settings → API (**secreta**, solo servidor) |
+| `DATABASE_URL` | Project Settings → Database → Connection string → *Transaction pooler* (puerto 6543), añade `?pgbouncer=true` |
+| `DIRECT_URL` | Igual, pero *Session pooler* (puerto 5432) |
+| `ENCRYPTION_KEY` | `openssl rand -base64 32`. Guárdala bien: sin ella no se pueden leer las claves de las tiendas. |
+| `SENDCLOUD_*` | Sendcloud → Ajustes → Integraciones → Sendcloud API |
+| `SENDER_*`, `COMPANY_*` | Datos de vuestro almacén y datos fiscales para etiquetas y facturas |
+
+### 3. Crear las tablas y el primer administrador
 ```bash
-cp .env.example .env
-npm install          # también genera el cliente de Prisma
-npm run db:push      # crea la base de datos SQLite
-npm run db:seed      # datos de demostración: 3 clientes, catálogo y ~3 semanas de pedidos
-npm run dev          # http://localhost:3000
+npm install
+npm run db:migrate                                   # crea las tablas y activa RLS
+npm run create-admin -- tu@email.com "contraseña" "Tu nombre"
+npm run dev                                          # http://localhost:3000
 ```
+Opcional: `npm run db:seed` carga datos de demostración (3 clientes, ~5 semanas de pedidos, recepciones y devoluciones). Se niega a ejecutarse si hay tiendas reales conectadas.
 
-Las tiendas de demostración están marcadas como *demo* y no llaman a ninguna API externa.
+### 4. Publicarlo online (Vercel)
+1. Importa el repositorio en [vercel.com](https://vercel.com).
+2. Añade todas las variables del `.env` en *Settings → Environment Variables* y pon `NEXT_PUBLIC_APP_URL` con la URL final.
+3. Despliega. El build ya ejecuta `prisma generate`.
+4. Cuando haya cambios en el modelo de datos, ejecuta `npm run db:migrate` contra Supabase.
 
-Para probar webhooks reales en local hace falta una URL pública, por ejemplo con un túnel (`cloudflared` o `ngrok`). Pon esa URL en `NEXT_PUBLIC_APP_URL`.
-
-## Conectar una tienda real
+## Conectar una tienda
 
 **Shopify**
 1. En Configuración → Apps y canales de venta → Desarrollar apps, crea una app.
-2. Dale los permisos `read_orders`, `read_products`, `read_merchant_managed_fulfillment_orders` y `write_merchant_managed_fulfillment_orders`.
+2. Dale los permisos `read_orders`, `read_products`, `read_merchant_managed_fulfillment_orders` y `write_merchant_managed_fulfillment_orders`. Activa también el acceso a datos protegidos del cliente, que hace falta para leer la dirección.
 3. Instala la app y copia el token `shpat_…`.
 4. En Configuración → Notificaciones → Webhooks, copia la clave de firma y crea los webhooks de pedido (JSON) apuntando a `/api/webhooks/shopify`.
 5. En Packia, ve a Tiendas → Conectar tienda.
-
-> Para leer la dirección de envío, Shopify exige acceso a datos protegidos del cliente: actívalo en la configuración de la app.
 
 **WooCommerce**
 1. En WooCommerce → Ajustes → Avanzado → REST API, crea una clave con permisos de lectura y escritura.
@@ -62,16 +91,12 @@ Para probar webhooks reales en local hace falta una URL pública, por ejemplo co
 
 ## Stack
 
-Next.js 15 (App Router, Server Actions) · React 19 · TypeScript · Tailwind CSS 4 · Prisma + SQLite.
-
-Para producción: cambiar el `provider` de Prisma a `postgresql` y apuntar `DATABASE_URL` a la base de datos.
+Next.js 15 (App Router, Server Actions, middleware) · React 19 · TypeScript · Tailwind CSS 4 · Prisma + PostgreSQL (Supabase) · Supabase Auth · pdf-lib + bwip-js (etiquetas).
 
 ## Próximos pasos
 
-- [ ] **Login y roles**: equipo del almacén y acceso de cada cliente solo a su panel. La app todavía no tiene autenticación, así que no debe publicarse en internet tal cual.
-- [ ] Cifrar las credenciales de las tiendas en la base de datos.
-- [ ] Generar las etiquetas de envío con la agencia o con una plataforma de agencias (Sendcloud, Packlink PRO).
-- [ ] Recepciones de mercancía y gestión de devoluciones.
 - [ ] Registrar los webhooks automáticamente al conectar la tienda.
-- [ ] Facturación mensual: cuota más pedidos de exceso.
-- [ ] Escaneo de códigos de barras desde el móvil en el picking.
+- [ ] Escaneo de códigos de barras desde el móvil en picking y recepción.
+- [ ] Domiciliación SEPA automática de las facturas (Stripe o GoCardless).
+- [ ] Avisos por email al cliente: stock bajo, recepción confirmada, factura emitida.
+- [ ] Recogida diaria de la agencia y manifiesto de salida.

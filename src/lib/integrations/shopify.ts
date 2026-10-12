@@ -29,6 +29,7 @@ type GqlAddress = {
   zip: string | null;
   province: string | null;
   country: string | null;
+  countryCodeV2: string | null;
   phone: string | null;
 } | null;
 
@@ -41,6 +42,7 @@ function toAddress(a: GqlAddress) {
     zip: a?.zip ?? "",
     province: a?.province ?? undefined,
     country: a?.country ?? "",
+    countryCode: a?.countryCodeV2 ?? undefined,
     phone: a?.phone ?? undefined,
   };
 }
@@ -69,7 +71,7 @@ export async function fetchOpenOrders(creds: ShopifyCreds): Promise<ExternalOrde
       orders(first: 100, sortKey: CREATED_AT, reverse: true, query: "status:open fulfillment_status:unfulfilled") {
         nodes {
           id name createdAt email
-          shippingAddress { name address1 address2 city zip province country phone }
+          shippingAddress { name address1 address2 city zip province country countryCodeV2 phone }
           lineItems(first: 100) { nodes { id sku name quantity } }
         }
       }
@@ -160,7 +162,7 @@ export function verifyWebhook(rawBody: string, hmacHeader: string | null, secret
 
 type RestAddress = {
   first_name?: string; last_name?: string; name?: string; address1?: string; address2?: string;
-  city?: string; zip?: string; province?: string; country?: string; phone?: string;
+  city?: string; zip?: string; province?: string; country?: string; country_code?: string; phone?: string;
 } | null;
 
 /** Convierte el payload REST de los webhooks orders/* al formato común. */
@@ -190,6 +192,7 @@ export function orderFromWebhook(p: {
       zip: a?.zip ?? "",
       province: a?.province || undefined,
       country: a?.country ?? "",
+      countryCode: a?.country_code || undefined,
       phone: a?.phone || undefined,
     },
     items: p.line_items.map((li) => ({

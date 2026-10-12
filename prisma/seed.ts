@@ -1,6 +1,7 @@
 /**
  * Datos de demostración: 3 clientes con sus tiendas (marcadas como demo,
- * no llaman a ninguna API), catálogo y ~3 semanas de pedidos.
+ * no llaman a ninguna API), catálogo, ~5 semanas de pedidos, recepciones y devoluciones.
+ * Se niega a ejecutarse si hay tiendas reales conectadas.
  */
 import { PrismaClient } from "@prisma/client";
 
@@ -25,7 +26,7 @@ const CARRIERS = ["MRW", "GLS", "Correos Express"];
 
 const CLIENTS = [
   {
-    name: "Lumière Cosmetics", email: "ops@lumiere.es", plan: "CRECIMIENTO", planOrders: 600, perDay: [6, 14],
+    name: "Lumière Cosmetics", email: "ops@lumiere.es", plan: "CRECIMIENTO", planOrders: 600, fee: 85000, extra: 130, perDay: [12, 24],
     store: { platform: "SHOPIFY", name: "lumiere.es", domain: "lumiere-cosmetics.myshopify.com", prefix: "#", start: 4120 },
     products: [
       ["LUM-SER-VC30", "Sérum Vitamina C 30 ml", "A-01-01", 64],
@@ -37,7 +38,7 @@ const CLIENTS = [
     ],
   },
   {
-    name: "Huellas & Co", email: "hola@huellasandco.com", plan: "ARRANQUE", planOrders: 300, perDay: [4, 11],
+    name: "Huellas & Co", email: "hola@huellasandco.com", plan: "ARRANQUE", planOrders: 300, fee: 48000, extra: 140, perDay: [8, 15],
     store: { platform: "WOOCOMMERCE", name: "huellasandco.com", domain: "https://huellasandco.com", prefix: "#", start: 2310 },
     products: [
       ["HUE-COL-NYM", "Collar de nailon — Talla M", "B-01-01", 55],
@@ -49,7 +50,7 @@ const CLIENTS = [
     ],
   },
   {
-    name: "Nordik Supplements", email: "logistica@nordik.shop", plan: "ARRANQUE", planOrders: 300, perDay: [3, 9],
+    name: "Nordik Supplements", email: "logistica@nordik.shop", plan: "ARRANQUE", planOrders: 300, fee: 48000, extra: 140, perDay: [5, 11],
     store: { platform: "SHOPIFY", name: "nordik.shop", domain: "nordik-supplements.myshopify.com", prefix: "#NK", start: 1088 },
     products: [
       ["NRD-COL-300", "Colágeno marino 300 g", "C-01-01", 88],
@@ -62,20 +63,33 @@ const CLIENTS = [
 ] as const;
 
 async function main() {
+  const real = await db.store.count({ where: { isDemo: false } });
+  if (real > 0) {
+    console.error("Hay tiendas reales conectadas: el seed borraría datos de producción. Abortado.");
+    process.exit(1);
+  }
+  await db.invoice.deleteMany();
+  await db.return.deleteMany();
+  await db.inbound.deleteMany();
   await db.orderItem.deleteMany();
   await db.order.deleteMany();
   await db.product.deleteMany();
   await db.store.deleteMany();
+  await db.profile.deleteMany({ where: { role: "CLIENT" } });
   await db.client.deleteMany();
 
   const now = new Date();
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);
-  const DAYS = 21;
+  const DAYS = 40;
 
   for (const c of CLIENTS) {
     const client = await db.client.create({
-      data: { name: c.name, contactEmail: c.email, plan: c.plan, planOrders: c.planOrders },
+      data: {
+        name: c.name, contactEmail: c.email, plan: c.plan, planOrders: c.planOrders,
+        monthlyFeeCents: c.fee, extraOrderFeeCents: c.extra, returnFeeCents: 150,
+        taxId: `B${int(10000000, 99999999)}`, billingAddress: `${pick(STREETS)}, ${int(1, 90)}\n${pick(CITIES)[1]} ${pick(CITIES)[0]}`,
+      },
     });
     const store = await db.store.create({
       data: {
@@ -89,7 +103,7 @@ async function main() {
       },
     });
     for (const [sku, name, location, stock] of c.products) {
-      await db.product.create({ data: { clientId: client.id, storeId: store.id, sku, name, location, stock, lowStockAt: 10 } });
+      await db.product.create({ data: { clientId: client.id, storeId: store.id, sku, name, location, stock, lowStockAt: 10, weightGrams: int(80, 900) } });
     }
 
     let number = c.store.start;
@@ -145,7 +159,9 @@ async function main() {
             placedAt,
             shippedAt,
             carrier: shippedAt ? pick(CARRIERS) : null,
-            trackingNumber: shippedAt ? `${int(10, 99)}${int(100000, 999999)}${int(1000, 9999)}` : null,
+            trackingNumber: shippedAt ? `PK${int(100000, 999999)}${int(1000, 9999)}` : null,
+            labelProvider: shippedAt ? "PACKIA" : null,
+            weightGrams: shippedAt ? int(250, 1800) : null,
             items: { create: chosen.map(([sku, name]) => ({ sku, name, quantity: rand() < 0.8 ? 1 : int(2, 3) })) },
           },
         });
@@ -153,8 +169,46 @@ async function main() {
     }
   }
 
-  const [clients, orders, products] = await Promise.all([db.client.count(), db.order.count(), db.product.count()]);
-  console.log(`Demo lista: ${clients} clientes, ${products} productos, ${orders} pedidos.`);
+  // Recepciones: una prevista y una recibida por cliente.
+  for (const client of await db.client.findMany({ include: { products: true } })) {
+    const lines = client.products.slice(0, 3);
+    const expectedAt = new Date(today);
+    expectedAt.setDate(expectedAt.getDate() + int(1, 4));
+    await db.inbound.create({
+      data: {
+        clientId: client.id, reference: `ALB-${int(1000, 9999)}`, carrier: pick(CARRIERS), boxes: int(2, 8), expectedAt,
+        items: { create: lines.map((p) => ({ sku: p.sku, name: p.name, expectedQty: int(2, 12) * 10 })) },
+      },
+    });
+    const receivedAt = new Date(today);
+    receivedAt.setDate(receivedAt.getDate() - int(3, 12));
+    await db.inbound.create({
+      data: {
+        clientId: client.id, reference: `ALB-${int(1000, 9999)}`, carrier: pick(CARRIERS), boxes: int(2, 8), status: "RECEIVED", receivedAt, expectedAt: receivedAt,
+        items: { create: lines.map((p) => { const q = int(2, 12) * 10; return { sku: p.sku, name: p.name, expectedQty: q, receivedQty: q - (rand() < 0.3 ? int(1, 3) : 0), damagedQty: rand() < 0.2 ? 1 : 0 }; }) },
+      },
+    });
+
+    // Devoluciones en distintos estados sobre pedidos enviados.
+    const shipped = await db.order.findMany({ where: { clientId: client.id, status: "SHIPPED" }, include: { items: true }, orderBy: { shippedAt: "desc" }, take: 40 });
+    for (const [i, status] of (["ANNOUNCED", "RECEIVED", "PROCESSED", "PROCESSED", "PROCESSED", "PROCESSED"] as const).entries()) {
+      const order = shipped[i * 5];
+      if (!order) break;
+      const processedAt = status === "PROCESSED" ? new Date(order.shippedAt!.getTime() + int(4, 9) * 86_400_000) : null;
+      await db.return.create({
+        data: {
+          clientId: client.id, orderId: order.id, status,
+          reason: pick(["No le queda bien / talla", "Producto defectuoso", "No era lo que esperaba", "Desistimiento"]),
+          receivedAt: status === "ANNOUNCED" ? null : processedAt ?? new Date(),
+          processedAt: processedAt && processedAt < now ? processedAt : status === "PROCESSED" ? now : null,
+          items: { create: order.items.slice(0, 1).map((it) => ({ sku: it.sku, name: it.name, quantity: 1, condition: status === "PROCESSED" ? (rand() < 0.8 ? "RESTOCK" : "DAMAGED") : null })) },
+        },
+      });
+    }
+  }
+
+  const [clients, orders, products, inbounds, returns] = await Promise.all([db.client.count(), db.order.count(), db.product.count(), db.inbound.count(), db.return.count()]);
+  console.log(`Demo lista: ${clients} clientes, ${products} productos, ${orders} pedidos, ${inbounds} recepciones, ${returns} devoluciones.`);
 }
 
 main()

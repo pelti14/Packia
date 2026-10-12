@@ -4,12 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "prisma db push --force-reset && tsx prisma/seed.ts",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "tsx --env-file=.env prisma/seed.ts",
+    "create-admin": "tsx --env-file=.env scripts/create-admin.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {
@@ -17,9 +18,13 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
+    "@supabase/ssr": "^0.6.1",
+    "@supabase/supabase-js": "^2.117.3",
+    "bwip-js": "^4.11.4",
     "clsx": "^2.1.1",
     "lucide-react": "^1.55.0",
     "next": "^15.5.27",
+    "pdf-lib": "^1.17.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },

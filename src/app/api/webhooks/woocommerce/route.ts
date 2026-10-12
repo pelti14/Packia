@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { decrypt } from "@/lib/crypto";
 import { orderFromWoo, verifyWebhook, type WooOrder } from "@/lib/integrations/woocommerce";
 import { upsertOrders } from "@/lib/sync";
 
@@ -20,9 +21,10 @@ export async function POST(req: Request) {
 
   const stores = await db.store.findMany({ where: { platform: "WOOCOMMERCE" } });
   const store = source ? stores.find((s) => normalize(s.domain) === normalize(source)) : undefined;
-  if (!store?.webhookSecret) return NextResponse.json({ error: "Tienda desconocida" }, { status: 404 });
+  const secret = decrypt(store?.webhookSecret);
+  if (!store || !secret) return NextResponse.json({ error: "Tienda desconocida" }, { status: 404 });
 
-  if (!verifyWebhook(rawBody, req.headers.get("x-wc-webhook-signature"), store.webhookSecret)) {
+  if (!verifyWebhook(rawBody, req.headers.get("x-wc-webhook-signature"), secret)) {
     return NextResponse.json({ error: "Firma no válida" }, { status: 401 });
   }
 

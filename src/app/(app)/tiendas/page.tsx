@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { AlertCircle, CheckCircle2, Plug, Plus } from "lucide-react";
 import { db } from "@/lib/db";
+import { requireUser } from "@/lib/auth";
 import { timeAgo } from "@/lib/format";
 import { Card, EmptyState, PageHeader, PlatformBadge } from "@/components/ui";
 import { SyncButton } from "./sync-button";
 
 export default async function StoresPage() {
+  const user = await requireUser(["ADMIN", "STAFF"]);
   const stores = await db.store.findMany({
     orderBy: { createdAt: "asc" },
     include: { client: true, _count: { select: { orders: true, products: true } } },
@@ -17,7 +19,7 @@ export default async function StoresPage() {
         eyebrow="Integraciones"
         title="Tiendas conectadas"
         description="Cada tienda envía sus pedidos pagados a Packia al instante mediante webhooks. La sincronización manual recupera los pendientes."
-        actions={<Link href="/tiendas/nueva" className="btn-primary"><Plus className="h-4 w-4" /> Conectar tienda</Link>}
+        actions={user.role === "ADMIN" && <Link href="/tiendas/nueva" className="btn-primary"><Plus className="h-4 w-4" /> Conectar tienda</Link>}
       />
 
       {stores.length ? (

@@ -1,11 +1,23 @@
 import type { Address } from "@/lib/types";
+import { TIME_ZONE } from "@/lib/schedule";
 
-const dateFmt = new Intl.DateTimeFormat("es-ES", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
-const dayFmt = new Intl.DateTimeFormat("es-ES", { weekday: "short", day: "numeric" });
+export { startOfDay, startOfMonth } from "@/lib/schedule";
+
+const dateFmt = new Intl.DateTimeFormat("es-ES", { timeZone: TIME_ZONE, day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+const dateOnlyFmt = new Intl.DateTimeFormat("es-ES", { timeZone: TIME_ZONE, day: "2-digit", month: "short", year: "numeric" });
+const dayFmt = new Intl.DateTimeFormat("es-ES", { timeZone: TIME_ZONE, weekday: "short", day: "numeric" });
+const monthFmt = new Intl.DateTimeFormat("es-ES", { timeZone: TIME_ZONE, month: "long", year: "numeric" });
 const relFmt = new Intl.RelativeTimeFormat("es", { numeric: "auto" });
+const eurFmt = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
 
 export const formatDate = (d: Date) => dateFmt.format(d);
+export const formatDateOnly = (d: Date) => dateOnlyFmt.format(d);
 export const formatDay = (d: Date) => dayFmt.format(d);
+export const formatMonth = (d: Date) => {
+  const s = monthFmt.format(d);
+  return s.charAt(0).toUpperCase() + s.slice(1);
+};
+export const eur = (cents: number) => eurFmt.format(cents / 100);
 
 export function timeAgo(d: Date) {
   const mins = Math.round((d.getTime() - Date.now()) / 60000);
@@ -23,12 +35,7 @@ export function parseAddress(json: string): Address {
   }
 }
 
-export function startOfDay(d = new Date()) {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
-
-export function startOfMonth(d = new Date()) {
-  return new Date(d.getFullYear(), d.getMonth(), 1);
+export function units(items: { quantity: number }[]) {
+  const n = items.reduce((s, i) => s + i.quantity, 0);
+  return `${n} ${n === 1 ? "ud." : "uds."}`;
 }

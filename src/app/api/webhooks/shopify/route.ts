@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { decrypt } from "@/lib/crypto";
 import { orderFromWebhook, verifyWebhook } from "@/lib/integrations/shopify";
 import { upsertOrders } from "@/lib/sync";
 
@@ -12,9 +13,10 @@ export async function POST(req: Request) {
   const topic = req.headers.get("x-shopify-topic") ?? "";
 
   const store = domain ? await db.store.findFirst({ where: { platform: "SHOPIFY", domain } }) : null;
-  if (!store?.webhookSecret) return NextResponse.json({ error: "Tienda desconocida" }, { status: 404 });
+  const secret = decrypt(store?.webhookSecret);
+  if (!store || !secret) return NextResponse.json({ error: "Tienda desconocida" }, { status: 404 });
 
-  if (!verifyWebhook(rawBody, req.headers.get("x-shopify-hmac-sha256"), store.webhookSecret)) {
+  if (!verifyWebhook(rawBody, req.headers.get("x-shopify-hmac-sha256"), secret)) {
     return NextResponse.json({ error: "Firma no válida" }, { status: 401 });
   }
 

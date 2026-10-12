@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
-import { ArrowLeft, Webhook } from "lucide-react";
+import { Webhook } from "lucide-react";
 import { db } from "@/lib/db";
+import { requireUser } from "@/lib/auth";
+import { decrypt } from "@/lib/crypto";
 import { formatDate } from "@/lib/format";
-import { Card, CardHeader, Notice, PageHeader, PlatformBadge, StatusBadge } from "@/components/ui";
+import { BackLink, Card, CardHeader, Notice, PageHeader, PlatformBadge, StatusBadge } from "@/components/ui";
 import { SyncButton } from "../sync-button";
 import { CopyField } from "./copy-field";
 
@@ -15,6 +17,7 @@ async function appUrl() {
 }
 
 export default async function StorePage({ params }: { params: Promise<{ id: string }> }) {
+  const user = await requireUser(["ADMIN", "STAFF"]);
   const { id } = await params;
   const store = await db.store.findUnique({
     where: { id },
@@ -28,9 +31,7 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
 
   return (
     <>
-      <Link href="/tiendas" className="mb-6 inline-flex items-center gap-1.5 text-sm text-ink-500 hover:text-brand-600">
-        <ArrowLeft className="h-4 w-4" /> Tiendas
-      </Link>
+      <BackLink href="/tiendas">Tiendas</BackLink>
       <PageHeader
         eyebrow={store.client.name}
         title={store.name}
@@ -52,7 +53,7 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
           <CardHeader title="Webhooks · pedidos en tiempo real" subtitle="Así cada pedido pagado entra en la cola al instante" action={<Webhook className="h-5 w-5 text-brand-500" />} />
           <div className="space-y-5 px-5 py-5">
             <CopyField label="URL de entrega" value={webhookUrl} />
-            {!shopify && store.webhookSecret && <CopyField label="Secreto" value={store.webhookSecret} />}
+            {!shopify && store.webhookSecret && user.role === "ADMIN" && <CopyField label="Secreto" value={decrypt(store.webhookSecret) ?? ""} />}
             <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed text-ink-700 marker:font-semibold marker:text-brand-500">
               {shopify ? (
                 <>
@@ -76,7 +77,7 @@ export default async function StorePage({ params }: { params: Promise<{ id: stri
           <ul className="divide-y divide-line/60">
             {store.orders.map((o) => (
               <li key={o.id}>
-                <Link href={`/pedidos/${o.id}`} className="flex items-center gap-3 px-5 py-3 transition hover:bg-brand-50/40">
+                <Link href={`/salida/${o.id}`} className="flex items-center gap-3 px-5 py-3 transition hover:bg-brand-50/40">
                   <span className="mono w-16 font-semibold text-ink-900">{o.number}</span>
                   <span className="min-w-0 flex-1 truncate text-sm text-ink-700">{o.customerName}</span>
                   <StatusBadge status={o.status} />

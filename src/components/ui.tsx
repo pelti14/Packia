@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { clsx } from "clsx";
 import type { LucideIcon } from "lucide-react";
 import { STATUS_LABEL, type OrderStatus } from "@/lib/types";
@@ -41,6 +42,7 @@ const TONES = {
   aqua: "from-aqua-500 to-aqua-400 text-aqua-600 bg-aqua-50",
   mint: "from-mint-500 to-aqua-400 text-mint-600 bg-mint-50",
   amber: "from-amber-500 to-amber-500 text-amber-600 bg-amber-50",
+  rose: "from-rose-500 to-amber-500 text-rose-500 bg-rose-50",
 } as const;
 
 export function StatCard({ label, value, hint, icon: Icon, tone = "brand" }: {
@@ -124,5 +126,60 @@ export function Notice({ tone = "info", children }: { tone?: "info" | "error" | 
     >
       {children}
     </div>
+  );
+}
+
+export function Pill({ tone = "brand", children }: { tone?: "brand" | "aqua" | "mint" | "amber" | "rose" | "ink"; children: React.ReactNode }) {
+  const styles = {
+    brand: "bg-brand-50 text-brand-600 ring-brand-500/20",
+    aqua: "bg-aqua-50 text-aqua-600 ring-aqua-500/25",
+    mint: "bg-mint-50 text-mint-600 ring-mint-500/25",
+    amber: "bg-amber-50 text-amber-600 ring-amber-500/20",
+    rose: "bg-rose-50 text-rose-500 ring-rose-500/20",
+    ink: "bg-line/60 text-ink-500 ring-ink-400/20",
+  };
+  return (
+    <span className={clsx("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset", styles[tone])}>
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+      {children}
+    </span>
+  );
+}
+
+/** Pestañas como enlaces (filtros por URL). */
+export function Tabs({ tabs, active }: { tabs: { key: string; label: string; href: string; count?: number; tone?: "rose" }[]; active: string }) {
+  return (
+    <div className="glass flex gap-1 overflow-x-auto rounded-xl p-1">
+      {tabs.map((t) => (
+        <Link
+          key={t.key}
+          href={t.href}
+          className={clsx(
+            "flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition",
+            t.key === active ? "bg-white text-brand-700 shadow-sm ring-1 ring-brand-100" : "text-ink-500 hover:text-ink-900",
+          )}
+        >
+          {t.label}
+          {t.count !== undefined && (
+            <span
+              className={clsx(
+                "mono rounded-md px-1.5 text-[11px]",
+                t.tone === "rose" && t.count > 0 ? "bg-rose-50 text-rose-500" : t.key === active ? "bg-brand-50 text-brand-600" : "bg-line/60 text-ink-500",
+              )}
+            >
+              {t.count}
+            </span>
+          )}
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+export function BackLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link href={href} className="mb-6 inline-flex items-center gap-1.5 text-sm text-ink-500 hover:text-brand-600 print:hidden">
+      <span aria-hidden>←</span> {children}
+    </Link>
   );
 }

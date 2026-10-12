@@ -1,31 +1,56 @@
-// Modelo de datos de Packia.
-// SQLite en desarrollo; para producción cambiar el provider a "postgresql".
+// Modelo de datos de Packia · PostgreSQL (Supabase).
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  /// Conexión con pooler de Supabase (puerto 6543) para la app.
+  url       = env("DATABASE_URL")
+  /// Conexión directa (puerto 5432) para migraciones.
+  directUrl = env("DIRECT_URL")
+}
+
+/// Perfil de un usuario de Supabase Auth: rol y, si es cliente, a qué empresa pertenece.
+model Profile {
+  /// Mismo id que auth.users en Supabase.
+  id        String   @id
+  email     String   @unique
+  name      String?
+  /// ADMIN | STAFF | CLIENT
+  role      String   @default("STAFF")
+  clientId  String?
+  client    Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 }
 
 /// Empresa a la que le hacemos la logística.
 model Client {
-  id           String    @id @default(cuid())
-  name         String
-  contactEmail String?
+  id                 String    @id @default(cuid())
+  name               String
+  contactEmail       String?
+  taxId              String?
+  billingAddress     String?
   /// ARRANQUE | CRECIMIENTO | ESCALA
-  plan         String    @default("ARRANQUE")
+  plan               String    @default("ARRANQUE")
   /// Pedidos incluidos en la cuota mensual.
-  planOrders   Int       @default(300)
-  createdAt    DateTime  @default(now())
-  stores       Store[]
-  products     Product[]
-  orders       Order[]
+  planOrders         Int       @default(300)
+  /// Importes en céntimos, sin IVA.
+  monthlyFeeCents    Int       @default(48000)
+  extraOrderFeeCents Int       @default(140)
+  returnFeeCents     Int       @default(150)
+  createdAt          DateTime  @default(now())
+  stores             Store[]
+  products           Product[]
+  orders             Order[]
+  inbounds           Inbound[]
+  returns            Return[]
+  invoices           Invoice[]
+  users              Profile[]
 }
 
-/// Tienda online conectada (Shopify o WooCommerce).
+/// Tienda online conectada (Shopify o WooCommerce). Las credenciales se guardan cifradas.
 model Store {
   id             String    @id @default(cuid())
   clientId       String
@@ -35,12 +60,13 @@ model Store {
   name           String
   /// Shopify: mitienda.myshopify.com · WooCommerce: https://mitienda.com
   domain         String
-  /// Shopify: token de la app personalizada (Admin API).
+  /// Cifrado (AES-256-GCM).
   accessToken    String?
-  /// WooCommerce: claves de la REST API.
+  /// Cifrado (AES-256-GCM).
   consumerKey    String?
+  /// Cifrado (AES-256-GCM).
   consumerSecret String?
-  /// Secreto para verificar la firma de los webhooks.
+  /// Cifrado (AES-256-GCM).
   webhookSecret  String?
   /// Tienda de demostración: no llama a ninguna API externa.
   isDemo         Boolean   @default(false)
@@ -54,22 +80,23 @@ model Store {
 }
 
 model Product {
-  id         String   @id @default(cuid())
-  clientId   String
-  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  storeId    String?
-  store      Store?   @relation(fields: [storeId], references: [id], onDelete: SetNull)
-  externalId String?
-  sku        String
-  name       String
-  imageUrl   String?
+  id          String   @id @default(cuid())
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  storeId     String?
+  store       Store?   @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  externalId  String?
+  sku         String
+  name        String
+  imageUrl    String?
   /// Stock físico en nuestro almacén.
-  stock      Int      @default(0)
+  stock       Int      @default(0)
   /// Ubicación en estantería, p. ej. A-01-02.
-  location   String?
+  location    String?
   /// Por debajo de este stock se avisa al cliente.
-  lowStockAt Int      @default(10)
-  updatedAt  DateTime @updatedAt
+  lowStockAt  Int      @default(10)
+  weightGrams Int?
+  updatedAt   DateTime @updatedAt
 
   @@unique([clientId, sku])
 }
@@ -91,15 +118,23 @@ model Order {
   shippingAddress String
   carrier         String?
   trackingNumber  String?
+  trackingUrl     String?
+  /// PACKIA (etiqueta interna) | SENDCLOUD | MANUAL
+  labelProvider   String?
+  /// Id del envío en el proveedor de etiquetas.
+  labelRef        String?
+  weightGrams     Int?
   /// Error al devolver el seguimiento a la tienda, si lo hubo.
   syncError       String?
   placedAt        DateTime
   shippedAt       DateTime?
   createdAt       DateTime    @default(now())
   items           OrderItem[]
+  returns         Return[]
 
   @@unique([storeId, externalId])
   @@index([status])
+  @@index([clientId, shippedAt])
 }
 
 model OrderItem {
@@ -110,4 +145,97 @@ model OrderItem {
   sku            String
   name           String
   quantity       Int
+}
+
+/// Recepción: mercancía que el cliente nos envía al almacén.
+model Inbound {
+  id         String        @id @default(cuid())
+  clientId   String
+  client     Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  /// Referencia del cliente (albarán, nº de pedido al proveedor…).
+  reference  String
+  carrier    String?
+  boxes      Int?
+  notes      String?
+  /// EXPECTED | RECEIVED
+  status     String        @default("EXPECTED")
+  expectedAt DateTime?
+  receivedAt DateTime?
+  createdAt  DateTime      @default(now())
+  items      InboundItem[]
+
+  @@index([status])
+}
+
+model InboundItem {
+  id          String  @id @default(cuid())
+  inboundId   String
+  inbound     Inbound @relation(fields: [inboundId], references: [id], onDelete: Cascade)
+  sku         String
+  name        String
+  expectedQty Int
+  receivedQty Int?
+  /// Unidades recibidas dañadas (no entran a stock).
+  damagedQty  Int     @default(0)
+}
+
+/// Devolución de un cliente final.
+model Return {
+  id          String       @id @default(cuid())
+  clientId    String
+  client      Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  orderId     String?
+  order       Order?       @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  reason      String?
+  /// ANNOUNCED | RECEIVED | PROCESSED
+  status      String       @default("ANNOUNCED")
+  receivedAt  DateTime?
+  processedAt DateTime?
+  createdAt   DateTime     @default(now())
+  items       ReturnItem[]
+
+  @@index([status])
+}
+
+model ReturnItem {
+  id        String  @id @default(cuid())
+  returnId  String
+  return    Return  @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  sku       String
+  name      String
+  quantity  Int
+  /// RESTOCK (vuelve a stock) | DAMAGED (no vendible) · se decide al procesar.
+  condition String?
+}
+
+/// Factura mensual de un cliente.
+model Invoice {
+  id            String        @id @default(cuid())
+  /// PK-2026-0001
+  number        String        @unique
+  clientId      String
+  client        Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  periodStart   DateTime
+  periodEnd     DateTime
+  /// ISSUED | PAID
+  status        String        @default("ISSUED")
+  subtotalCents Int
+  taxRate       Int           @default(21)
+  taxCents      Int
+  totalCents    Int
+  issuedAt      DateTime      @default(now())
+  paidAt        DateTime?
+  lines         InvoiceLine[]
+
+  @@unique([clientId, periodStart])
+}
+
+model InvoiceLine {
+  id             String  @id @default(cuid())
+  invoiceId      String
+  invoice        Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description    String
+  quantity       Int
+  unitPriceCents Int
+  amountCents    Int
 }

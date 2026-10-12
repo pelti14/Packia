@@ -1,20 +1,27 @@
 import type { Store } from "@prisma/client";
 import { db } from "@/lib/db";
+import { decrypt } from "@/lib/crypto";
 import * as shopify from "@/lib/integrations/shopify";
 import * as woo from "@/lib/integrations/woocommerce";
 import type { ExternalOrder, ExternalProduct, Shipment } from "@/lib/types";
 
-function shopifyCreds(store: Store) {
-  if (!store.accessToken) throw new Error("Falta el token de acceso de Shopify");
-  return { domain: store.domain, accessToken: store.accessToken };
+type StoreCreds = Pick<Store, "platform" | "domain" | "accessToken" | "consumerKey" | "consumerSecret">;
+
+function shopifyCreds(store: StoreCreds) {
+  const accessToken = decrypt(store.accessToken);
+  if (!accessToken) throw new Error("Falta el token de acceso de Shopify");
+  return { domain: store.domain, accessToken };
 }
 
-function wooCreds(store: Store) {
-  if (!store.consumerKey || !store.consumerSecret) throw new Error("Faltan las claves de la API de WooCommerce");
-  return { domain: store.domain, consumerKey: store.consumerKey, consumerSecret: store.consumerSecret };
+function wooCreds(store: StoreCreds) {
+  const consumerKey = decrypt(store.consumerKey);
+  const consumerSecret = decrypt(store.consumerSecret);
+  if (!consumerKey || !consumerSecret) throw new Error("Faltan las claves de la API de WooCommerce");
+  return { domain: store.domain, consumerKey, consumerSecret };
 }
 
-export async function testStoreConnection(store: Store): Promise<string> {
+/** Prueba credenciales (cifradas o en claro) antes de guardar una tienda. */
+export async function testStoreConnection(store: StoreCreds): Promise<string> {
   return store.platform === "SHOPIFY"
     ? shopify.testConnection(shopifyCreds(store))
     : woo.testConnection(wooCreds(store));
@@ -122,6 +129,10 @@ export async function shipOrder(orderId: string, shipment: Shipment) {
         status: "SHIPPED",
         carrier: shipment.carrier,
         trackingNumber: shipment.trackingNumber,
+        trackingUrl: shipment.trackingUrl,
+        labelProvider: shipment.labelProvider ?? "MANUAL",
+        labelRef: shipment.labelRef,
+        weightGrams: shipment.weightGrams,
         shippedAt: new Date(),
         syncError,
       },

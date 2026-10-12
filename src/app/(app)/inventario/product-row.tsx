@@ -7,11 +7,12 @@ import { updateProduct, type FormState } from "@/app/actions";
 import { SubmitButton } from "@/components/submit-button";
 
 type Props = {
-  product: { id: string; sku: string; name: string; imageUrl: string | null; stock: number; location: string | null; lowStockAt: number };
+  product: { id: string; sku: string; name: string; imageUrl: string | null; stock: number; location: string | null; lowStockAt: number; weightGrams: number | null };
   clientName: string;
+  editable: boolean;
 };
 
-export function ProductRow({ product: p, clientName }: Props) {
+export function ProductRow({ product: p, clientName, editable }: Props) {
   const [editing, setEditing] = useState(false);
   const [state, action] = useActionState<FormState, FormData>(async (prev, form) => {
     const r = await updateProduct(p.id, prev, form);
@@ -72,7 +73,14 @@ export function ProductRow({ product: p, clientName }: Props) {
         )}
         {state?.error && <div className="mt-1 text-xs text-rose-500">{state.error}</div>}
       </td>
-      <td className="cell text-right">
+      <td className="cell">
+        {editing ? (
+          <input form={formId} name="weightGrams" type="number" min={0} defaultValue={p.weightGrams ?? ""} placeholder="g" className="input mono w-24 py-1.5" />
+        ) : (
+          <span className="mono text-ink-500">{p.weightGrams ? `${p.weightGrams} g` : "—"}</span>
+        )}
+      </td>
+      {editable && <td className="cell text-right">
         {editing ? (
           <form id={formId} action={action} className="flex justify-end gap-2">
             <button type="button" className="btn-ghost px-3 py-1.5" onClick={() => setEditing(false)}>Cancelar</button>
@@ -83,7 +91,7 @@ export function ProductRow({ product: p, clientName }: Props) {
             <Pencil className="h-3.5 w-3.5" /> Editar
           </button>
         )}
-      </td>
+      </td>}
     </tr>
   );
 }

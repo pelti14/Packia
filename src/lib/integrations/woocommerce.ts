@@ -55,6 +55,7 @@ export function orderFromWoo(o: WooOrder): ExternalOrder {
       zip: s.postcode,
       province: s.state || undefined,
       country: s.country,
+      countryCode: s.country || undefined,
       phone: o.shipping?.phone || o.billing?.phone || undefined,
     },
     items: o.line_items.map((li) => ({

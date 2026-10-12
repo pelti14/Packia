@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { clsx } from "clsx";
-import { ArrowLeft, Check, MapPin, PackageOpen, Truck } from "lucide-react";
+import { Check, ExternalLink, MapPin, PackageOpen, Printer, RotateCcw, Truck } from "lucide-react";
 import { db } from "@/lib/db";
+import { canAccessClient, isStaff, requireUser } from "@/lib/auth";
 import { advanceOrder } from "@/app/actions";
+import { estimateWeight, listShippingMethods } from "@/lib/labels";
 import { formatDate, parseAddress } from "@/lib/format";
+import { urgency } from "@/lib/schedule";
 import { ORDER_FLOW, STATUS_LABEL, type OrderStatus } from "@/lib/types";
-import { Card, CardHeader, Notice, PlatformBadge, StatusBadge } from "@/components/ui";
+import { BackLink, Card, CardHeader, Notice, PlatformBadge, Pill, StatusBadge } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { ShipForm } from "./ship-form";
 
@@ -17,8 +20,10 @@ const NEXT_ACTION: Partial<Record<OrderStatus, string>> = {
 
 export default async function OrderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const order = await db.order.findUnique({ where: { id }, include: { client: true, store: true, items: true } });
-  if (!order) notFound();
+  const user = await requireUser();
+  const order = await db.order.findUnique({ where: { id }, include: { client: true, store: true, items: true, returns: true } });
+  if (!order || !canAccessClient(user, order.clientId)) notFound();
+  const staff = isStaff(user);
 
   const products = await db.product.findMany({ where: { clientId: order.clientId, sku: { in: order.items.map((i) => i.sku) } } });
   const bySku = new Map(products.map((p) => [p.sku, p]));
@@ -26,18 +31,30 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   const status = order.status as OrderStatus;
   const step = ORDER_FLOW.indexOf(status);
   const units = order.items.reduce((s, i) => s + i.quantity, 0);
+  const open = ["PENDING", "PICKING", "PACKED"].includes(status);
+  const u = urgency(order.placedAt);
+
+  let methods: Awaited<ReturnType<typeof listShippingMethods>> = [];
+  let methodsError: string | null = null;
+  if (staff && status === "PACKED") {
+    try {
+      methods = await listShippingMethods();
+    } catch (err) {
+      methodsError = err instanceof Error ? err.message : String(err);
+    }
+  }
 
   return (
     <>
-      <Link href="/pedidos" className="mb-6 inline-flex items-center gap-1.5 text-sm text-ink-500 hover:text-brand-600">
-        <ArrowLeft className="h-4 w-4" /> Pedidos
-      </Link>
+      <BackLink href="/salida">Salida</BackLink>
 
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <h1 className="mono text-3xl font-bold text-ink-900">{order.number}</h1>
             <StatusBadge status={order.status} />
+            {open && u === "OVERDUE" && <Pill tone="rose">Retrasado</Pill>}
+            {open && u === "TODAY" && <Pill tone="brand">Sale hoy</Pill>}
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-ink-500">
             <span className="font-medium text-ink-700">{order.client.name}</span>·<PlatformBadge platform={order.store.platform} />·
@@ -66,7 +83,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                       {done ? <Check className="h-4 w-4" /> : i + 1}
                     </div>
                     <span className={clsx("hidden text-sm font-medium sm:block", done || current ? "text-ink-900" : "text-ink-400")}>
-                      {STATUS_LABEL[s]}
+                      {s === "PACKED" ? "Embalado" : STATUS_LABEL[s]}
                     </span>
                   </div>
                   {i < ORDER_FLOW.length - 1 && (
@@ -87,7 +104,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
               .sort((a, b) => (bySku.get(a.sku)?.location ?? "ZZ").localeCompare(bySku.get(b.sku)?.location ?? "ZZ"))
               .map((item) => {
                 const p = bySku.get(item.sku);
-                const short = p && p.stock < item.quantity && status !== "SHIPPED";
+                const short = p && p.stock < item.quantity && open;
                 return (
                   <li key={item.id} className="flex items-center gap-4 px-5 py-4">
                     <div className="mono flex h-12 w-20 shrink-0 flex-col items-center justify-center rounded-xl bg-gradient-to-br from-brand-50 to-aqua-50 text-xs font-semibold text-brand-700 ring-1 ring-brand-100">
@@ -100,9 +117,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                       {short && <div className="mt-1 text-xs font-medium text-rose-500">Stock insuficiente: quedan {p.stock}</div>}
                       {!p && <div className="mt-1 text-xs font-medium text-amber-600">SKU no registrado en inventario</div>}
                     </div>
-                    <div className="text-right">
-                      <div className="font-display text-2xl font-bold text-ink-900">×{item.quantity}</div>
-                    </div>
+                    <div className="font-display text-2xl font-bold text-ink-900">×{item.quantity}</div>
                   </li>
                 );
               })}
@@ -126,13 +141,33 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
               </div>
 
               {status === "SHIPPED" ? (
-                <div className="rounded-xl bg-mint-50 p-4 ring-1 ring-mint-500/20">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-mint-600"><Truck className="h-4 w-4" /> {order.carrier}</div>
-                  <div className="mono mt-1 text-ink-900">{order.trackingNumber}</div>
-                  {order.shippedAt && <div className="mt-1 text-xs text-ink-500">Enviado {formatDate(order.shippedAt)}</div>}
+                <div className="space-y-3">
+                  <div className="rounded-xl bg-mint-50 p-4 ring-1 ring-mint-500/20">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-mint-600"><Truck className="h-4 w-4" /> {order.carrier}</div>
+                    <div className="mono mt-1 text-ink-900">{order.trackingNumber}</div>
+                    {order.shippedAt && <div className="mt-1 text-xs text-ink-500">Enviado {formatDate(order.shippedAt)}{order.weightGrams ? ` · ${order.weightGrams} g` : ""}</div>}
+                    {order.trackingUrl && (
+                      <a href={order.trackingUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:underline">
+                        Seguimiento <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+                  </div>
+                  {order.labelProvider && order.labelProvider !== "MANUAL" && (
+                    <a href={`/api/labels/${order.id}`} target="_blank" className="btn-primary w-full">
+                      <Printer className="h-4 w-4" /> Imprimir etiqueta
+                    </a>
+                  )}
+                  <Link href={`/devoluciones/nueva?order=${order.id}`} className="btn-ghost w-full">
+                    <RotateCcw className="h-4 w-4" /> Registrar devolución
+                  </Link>
                 </div>
+              ) : !staff ? (
+                <Notice>{status === "CANCELLED" ? "Pedido cancelado en la tienda." : "En preparación en el almacén."}</Notice>
               ) : status === "PACKED" ? (
-                <ShipForm orderId={order.id} />
+                <>
+                  {methodsError && <Notice tone="error">Sendcloud no disponible: {methodsError}</Notice>}
+                  <ShipForm orderId={order.id} weightGrams={await estimateWeight(order)} sendcloudMethods={methods} />
+                </>
               ) : status !== "CANCELLED" ? (
                 <form action={advanceOrder.bind(null, order.id)}>
                   <SubmitButton className="w-full"><PackageOpen className="h-4 w-4" /> {NEXT_ACTION[status]}</SubmitButton>
@@ -144,6 +179,17 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
               {order.syncError && <Notice tone="error">No se pudo avisar a la tienda: {order.syncError}</Notice>}
             </div>
           </Card>
+
+          {order.returns.length > 0 && (
+            <Card className="px-5 py-4">
+              <div className="label">Devoluciones</div>
+              {order.returns.map((r) => (
+                <Link key={r.id} href={`/devoluciones/${r.id}`} className="block text-sm font-medium text-brand-600 hover:underline">
+                  Devolución del {formatDate(r.createdAt)}
+                </Link>
+              ))}
+            </Card>
+          )}
 
           {order.email && (
             <Card className="px-5 py-4 text-sm">

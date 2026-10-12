@@ -1,17 +1,21 @@
 import { Boxes, Layers, PackageX, TriangleAlert } from "lucide-react";
 import { db } from "@/lib/db";
+import { clientScope, isStaff, requireUser } from "@/lib/auth";
 import { Card, EmptyState, PageHeader, StatCard } from "@/components/ui";
 import { ProductRow } from "./product-row";
 
 export default async function InventoryPage({ searchParams }: { searchParams: Promise<{ client?: string }> }) {
   const { client } = await searchParams;
+  const user = await requireUser();
+  const staff = isStaff(user);
+  const scope = { ...clientScope(user), ...(client && staff ? { clientId: client } : {}) };
   const [products, clients] = await Promise.all([
     db.product.findMany({
-      where: client ? { clientId: client } : undefined,
+      where: scope,
       include: { client: true },
       orderBy: [{ client: { name: "asc" } }, { location: "asc" }],
     }),
-    db.client.findMany({ orderBy: { name: "asc" } }),
+    staff ? db.client.findMany({ orderBy: { name: "asc" } }) : Promise.resolve([]),
   ]);
 
   const units = products.reduce((s, p) => s + p.stock, 0);
@@ -23,9 +27,9 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
       <PageHeader
         eyebrow="Almacén"
         title="Inventario"
-        description="Las referencias se importan de cada tienda. El stock físico y la ubicación los controla el almacén: al enviar un pedido se descuenta solo."
+        description="Las referencias se importan de cada tienda. El stock sube con cada recepción y devolución, y baja con cada envío."
         actions={
-          <form className="flex gap-2">
+          staff && <form className="flex gap-2">
             <select name="client" defaultValue={client ?? ""} className="input w-56">
               <option value="">Todos los clientes</option>
               {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -52,11 +56,12 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
                   <th className="table-head">Cliente</th>
                   <th className="table-head">Ubicación</th>
                   <th className="table-head">Stock</th>
-                  <th className="table-head" />
+                  <th className="table-head">Peso</th>
+                  {staff && <th className="table-head" />}
                 </tr>
               </thead>
               <tbody className="divide-y divide-line/60">
-                {products.map((p) => <ProductRow key={p.id} product={p} clientName={p.client.name} />)}
+                {products.map((p) => <ProductRow key={p.id} product={p} clientName={p.client.name} editable={staff} />)}
               </tbody>
             </table>
           </div>

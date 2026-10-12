@@ -1,81 +1,75 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, Clock3, PackageCheck, Plug, Send, Target } from "lucide-react";
+import { AlertTriangle, ArrowRight, Clock3, PackageCheck, PackagePlus, Send, Siren, Target } from "lucide-react";
 import { db } from "@/lib/db";
-import { formatDay, startOfDay, startOfMonth, timeAgo } from "@/lib/format";
-import { Card, CardHeader, EmptyState, PageHeader, PlatformBadge, StatCard, StatusBadge } from "@/components/ui";
+import { clientScope, isStaff, requireUser } from "@/lib/auth";
+import { formatDateOnly, formatDay, timeAgo, units } from "@/lib/format";
+import { addDays, dayKey, shippedOnTime, startOfDay, startOfMonth, urgency } from "@/lib/schedule";
+import { Card, CardHeader, EmptyState, Notice, PageHeader, PlatformBadge, StatCard, StatusBadge } from "@/components/ui";
 
-const CUTOFF_HOUR = 14;
-
-function units(items: { quantity: number }[]) {
-  const n = items.reduce((s, i) => s + i.quantity, 0);
-  return `${n} ${n === 1 ? "ud." : "uds."}`;
-}
-
-/** Un pedido llega a tiempo si sale el mismo día (antes del corte) o al día siguiente (después del corte). */
-function shippedOnTime(placedAt: Date, shippedAt: Date) {
-  const deadline = startOfDay(placedAt);
-  if (placedAt.getHours() >= CUTOFF_HOUR) deadline.setDate(deadline.getDate() + 1);
-  deadline.setHours(23, 59, 59, 999);
-  return shippedAt <= deadline;
-}
-
-export default async function Dashboard() {
+export default async function Dashboard({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const { error } = await searchParams;
+  const user = await requireUser();
+  const scope = clientScope(user);
   const today = startOfDay();
-  const since14 = new Date(today);
-  since14.setDate(since14.getDate() - 13);
-  const since30 = new Date(today);
-  since30.setDate(since30.getDate() - 30);
+  const since14 = addDays(today, -13);
+  const since30 = addDays(today, -30);
 
-  const [open, shippedToday, stores, recentShipped, last14, queue, clients, products] = await Promise.all([
-    db.order.count({ where: { status: { in: ["PENDING", "PICKING", "PACKED"] } } }),
-    db.order.count({ where: { status: "SHIPPED", shippedAt: { gte: today } } }),
-    db.store.count(),
-    db.order.findMany({ where: { status: "SHIPPED", shippedAt: { gte: since30 } }, select: { placedAt: true, shippedAt: true } }),
-    db.order.findMany({ where: { placedAt: { gte: since14 } }, select: { placedAt: true } }),
+  const [openOrders, shippedToday, recentShipped, last14, clients, products, inbounds] = await Promise.all([
     db.order.findMany({
-      where: { status: { in: ["PENDING", "PICKING", "PACKED"] } },
+      where: { ...scope, status: { in: ["PENDING", "PICKING", "PACKED"] } },
       orderBy: { placedAt: "asc" },
-      take: 6,
       include: { client: true, store: true, items: true },
     }),
-    db.client.findMany({ include: { _count: { select: { orders: { where: { placedAt: { gte: startOfMonth() } } } } } }, orderBy: { name: "asc" } }),
-    db.product.findMany({ include: { client: true } }),
+    db.order.count({ where: { ...scope, status: "SHIPPED", shippedAt: { gte: today } } }),
+    db.order.findMany({ where: { ...scope, status: "SHIPPED", shippedAt: { gte: since30 } }, select: { placedAt: true, shippedAt: true } }),
+    db.order.findMany({ where: { ...scope, placedAt: { gte: since14 } }, select: { placedAt: true } }),
+    db.client.findMany({
+      where: scope.clientId ? { id: scope.clientId } : undefined,
+      include: { _count: { select: { orders: { where: { status: "SHIPPED", shippedAt: { gte: startOfMonth() } } } } } },
+      orderBy: { name: "asc" },
+    }),
+    db.product.findMany({ where: scope, include: { client: true } }),
+    db.inbound.findMany({ where: { ...scope, status: "EXPECTED" }, include: { client: true, items: true }, orderBy: { expectedAt: "asc" }, take: 4 }),
   ]);
 
+  const dueNow = openOrders.filter((o) => urgency(o.placedAt) !== "LATER");
+  const overdue = openOrders.filter((o) => urgency(o.placedAt) === "OVERDUE").length;
   const onTime = recentShipped.filter((o) => o.shippedAt && shippedOnTime(o.placedAt, o.shippedAt)).length;
   const onTimeRate = recentShipped.length ? Math.round((onTime / recentShipped.length) * 1000) / 10 : 100;
   const lowStock = products.filter((p) => p.stock <= p.lowStockAt).sort((a, b) => a.stock - b.stock).slice(0, 5);
 
-  const days = Array.from({ length: 14 }, (_, i) => {
-    const d = new Date(since14);
-    d.setDate(d.getDate() + i);
-    return { date: d, count: 0 };
-  });
+  const days = Array.from({ length: 14 }, (_, i) => ({ date: addDays(since14, i), count: 0 }));
+  const index = new Map(days.map((d, i) => [dayKey(d.date), i]));
   for (const o of last14) {
-    const idx = Math.floor((startOfDay(o.placedAt).getTime() - since14.getTime()) / 86_400_000);
-    if (days[idx]) days[idx].count++;
+    const i = index.get(dayKey(o.placedAt));
+    if (i !== undefined) days[i].count++;
   }
   const max = Math.max(1, ...days.map((d) => d.count));
   const total14 = days.reduce((s, d) => s + d.count, 0);
 
   return (
     <>
+      {error === "sin-permiso" && <div className="mb-6"><Notice tone="error">No tienes permiso para ver esa sección.</Notice></div>}
       <PageHeader
-        eyebrow="Centro de operaciones"
-        title={<>Hoy salen <span className="text-gradient">{open}</span> pedidos</>}
-        description="Todo lo que entra antes de la hora de corte se prepara y sale hoy. Estado en tiempo real de tus tiendas conectadas."
+        eyebrow={user.clientName ?? "Centro de operaciones"}
+        title={<>Hoy tienen que salir <span className="text-gradient">{dueNow.length}</span> pedidos</>}
+        description={
+          isStaff(user)
+            ? "Todo lo que entra antes de las 14:00 en día laborable sale hoy. Lo que entra después, el siguiente día laborable."
+            : "Estado en tiempo real de tus pedidos, tu stock y tus recepciones en el almacén de Packia."
+        }
         actions={
-          <Link href="/pedidos?status=PENDING" className="btn-primary">
-            Empezar a preparar <ArrowRight className="h-4 w-4" />
+          <Link href="/salida" className="btn-primary">
+            {isStaff(user) ? "Ir a salida" : "Ver mis pedidos"} <ArrowRight className="h-4 w-4" />
           </Link>
         }
       />
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-        <StatCard label="En cola" value={open} hint="Pendientes, preparando y embalados" icon={Clock3} tone="amber" />
+        <StatCard label="Para hoy" value={dueNow.length} hint={`${openOrders.length} en cola en total`} icon={Clock3} tone="amber" />
+        <StatCard label="Retrasados" value={overdue} hint="Debían haber salido antes de hoy" icon={Siren} tone={overdue ? "rose" : "mint"} />
         <StatCard label="Enviados hoy" value={shippedToday} hint="Con seguimiento devuelto a la tienda" icon={Send} tone="mint" />
-        <StatCard label="A tiempo · 30 días" value={`${onTimeRate}%`} hint={`${onTime} de ${recentShipped.length} envíos dentro del corte`} icon={Target} tone="brand" />
-        <StatCard label="Tiendas conectadas" value={stores} hint="Shopify y WooCommerce" icon={Plug} tone="aqua" />
+        <StatCard label="A tiempo · 30 días" value={`${onTimeRate}%`} hint={`${onTime} de ${recentShipped.length} envíos en plazo`} icon={Target} tone="brand" />
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-3">
@@ -93,7 +87,7 @@ export default async function Dashboard() {
                           ? "w-full rounded-t-lg bg-gradient-to-t from-brand-600 to-aqua-400 shadow-[0_0_24px_-4px_rgb(79_107_255/0.6)]"
                           : "w-full rounded-t-lg bg-gradient-to-t from-brand-200 to-brand-100 transition group-hover:from-brand-400 group-hover:to-aqua-400"
                       }
-                      style={{ height: `${Math.max(4, (d.count / max) * 100)}%` }}
+                      style={{ height: `${Math.max(3, (d.count / max) * 100)}%` }}
                     />
                     <span className="mono pointer-events-none absolute -top-6 left-1/2 -translate-x-1/2 text-[11px] font-semibold text-ink-700 opacity-0 transition group-hover:opacity-100">
                       {d.count}
@@ -107,11 +101,15 @@ export default async function Dashboard() {
         </Card>
 
         <Card>
-          <CardHeader title="Uso del plan este mes" subtitle="Pedidos frente a los incluidos en la cuota" />
+          <CardHeader
+            title="Cuota de pedidos este mes"
+            subtitle="Pedidos enviados frente a los incluidos en el plan"
+            action={user.role !== "STAFF" && <Link href="/facturacion" className="text-xs font-semibold text-brand-600 hover:underline">Facturación</Link>}
+          />
           <div className="space-y-5 px-5 py-5">
             {clients.map((c) => {
               const used = c._count.orders;
-              const pct = Math.min(100, Math.round((used / c.planOrders) * 100));
+              const pct = Math.min(100, Math.round((used / Math.max(1, c.planOrders)) * 100));
               const over = used > c.planOrders;
               return (
                 <div key={c.id}>
@@ -127,7 +125,7 @@ export default async function Dashboard() {
                       style={{ width: `${pct}%` }}
                     />
                   </div>
-                  {over && <div className="mt-1 text-[11px] text-amber-600">{used - c.planOrders} pedidos de exceso a facturar</div>}
+                  {over && <div className="mt-1 text-[11px] text-amber-600">{used - c.planOrders} pedidos por encima del plan</div>}
                 </div>
               );
             })}
@@ -139,53 +137,85 @@ export default async function Dashboard() {
       <div className="mt-6 grid gap-6 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardHeader
-            title="Siguientes en la cola"
-            subtitle="Los más antiguos primero"
-            action={<Link href="/pedidos" className="text-xs font-semibold text-brand-600 hover:underline">Ver todos</Link>}
+            title="Siguientes en salir"
+            subtitle="Los más urgentes primero"
+            action={<Link href="/salida" className="text-xs font-semibold text-brand-600 hover:underline">Ver todos</Link>}
           />
-          {queue.length ? (
+          {openOrders.length ? (
             <ul className="divide-y divide-line/70">
-              {queue.map((o) => (
-                <li key={o.id}>
-                  <Link href={`/pedidos/${o.id}`} className="flex items-center gap-4 px-5 py-3.5 transition hover:bg-brand-50/40">
-                    <div className="mono w-16 font-semibold text-ink-900">{o.number}</div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium text-ink-900">{o.customerName}</div>
-                      <div className="flex items-center gap-2 text-xs text-ink-400">
-                        {o.client.name} · <PlatformBadge platform={o.store.platform} />
+              {openOrders.slice(0, 6).map((o) => {
+                const u = urgency(o.placedAt);
+                return (
+                  <li key={o.id}>
+                    <Link href={`/salida/${o.id}`} className="flex items-center gap-4 px-5 py-3.5 transition hover:bg-brand-50/40">
+                      <div className="mono w-20 font-semibold text-ink-900">{o.number}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium text-ink-900">{o.customerName}</div>
+                        <div className="flex items-center gap-2 text-xs text-ink-400">
+                          {o.client.name} · <PlatformBadge platform={o.store.platform} />
+                        </div>
                       </div>
-                    </div>
-                    <div className="hidden text-xs text-ink-500 sm:block">{units(o.items)}</div>
-                    <div className="hidden w-24 text-right text-xs text-ink-400 md:block">{timeAgo(o.placedAt)}</div>
-                    <StatusBadge status={o.status} />
-                  </Link>
-                </li>
-              ))}
+                      <div className="hidden text-xs text-ink-500 sm:block">{units(o.items)}</div>
+                      <div className="hidden w-24 text-right text-xs md:block">
+                        {u === "OVERDUE" ? <span className="font-semibold text-rose-500">Retrasado</span> : <span className="text-ink-400">{timeAgo(o.placedAt)}</span>}
+                      </div>
+                      <StatusBadge status={o.status} />
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           ) : (
             <EmptyState icon={PackageCheck} title="Cola vacía">Todo enviado. Buen trabajo.</EmptyState>
           )}
         </Card>
 
-        <Card>
-          <CardHeader title="Stock bajo" subtitle="Avisar al cliente para reponer" />
-          {lowStock.length ? (
-            <ul className="divide-y divide-line/70">
-              {lowStock.map((p) => (
-                <li key={p.id} className="flex items-center gap-3 px-5 py-3">
-                  <AlertTriangle className={p.stock <= 0 ? "h-4 w-4 text-rose-500" : "h-4 w-4 text-amber-500"} />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium text-ink-900">{p.name}</div>
-                    <div className="text-xs text-ink-400">{p.client.name} · <span className="mono">{p.sku}</span></div>
-                  </div>
-                  <div className={p.stock <= 0 ? "mono font-semibold text-rose-500" : "mono font-semibold text-amber-600"}>{p.stock}</div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EmptyState icon={PackageCheck} title="Stock correcto">Ningún producto por debajo del mínimo.</EmptyState>
-          )}
-        </Card>
+        <div className="space-y-6">
+          <Card>
+            <CardHeader title="Recepciones previstas" action={<Link href="/recepcion" className="text-xs font-semibold text-brand-600 hover:underline">Ver</Link>} />
+            {inbounds.length ? (
+              <ul className="divide-y divide-line/70">
+                {inbounds.map((r) => (
+                  <li key={r.id}>
+                    <Link href={`/recepcion/${r.id}`} className="flex items-center gap-3 px-5 py-3 transition hover:bg-brand-50/40">
+                      <PackagePlus className="h-4 w-4 text-aqua-600" />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium text-ink-900">{r.reference}</div>
+                        <div className="text-xs text-ink-400">{r.client.name}</div>
+                      </div>
+                      <div className="text-right text-xs text-ink-500">
+                        <div className="mono font-semibold text-ink-900">{r.items.reduce((s, i) => s + i.expectedQty, 0)} uds.</div>
+                        {r.expectedAt && formatDateOnly(r.expectedAt)}
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="px-5 py-5 text-sm text-ink-500">No hay mercancía prevista.</p>
+            )}
+          </Card>
+
+          <Card>
+            <CardHeader title="Stock bajo" subtitle="Reponer pronto" />
+            {lowStock.length ? (
+              <ul className="divide-y divide-line/70">
+                {lowStock.map((p) => (
+                  <li key={p.id} className="flex items-center gap-3 px-5 py-3">
+                    <AlertTriangle className={p.stock <= 0 ? "h-4 w-4 text-rose-500" : "h-4 w-4 text-amber-500"} />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium text-ink-900">{p.name}</div>
+                      <div className="text-xs text-ink-400">{p.client.name} · <span className="mono">{p.sku}</span></div>
+                    </div>
+                    <div className={p.stock <= 0 ? "mono font-semibold text-rose-500" : "mono font-semibold text-amber-600"}>{p.stock}</div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="px-5 py-5 text-sm text-ink-500">Ningún producto por debajo del mínimo.</p>
+            )}
+          </Card>
+        </div>
       </div>
     </>
   );
