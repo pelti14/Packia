@@ -1,10 +1,10 @@
-# Packia — Cliente ideal (ICP)
+# Kargia — Cliente ideal (ICP)
 
 > Documento vivo. Última revisión: 12/10/2026.
 
 ## 1. Qué vendemos
 
-Packia es un servicio de **fulfillment para ecommerce**: recibimos la mercancía de la marca, la almacenamos, preparamos y embalamos cada pedido y lo dejamos listo para el transportista. El cliente factura el transporte directamente con la agencia, pero accede a **nuestras tarifas negociadas**.
+Kargia es un servicio de **fulfillment para ecommerce**: recibimos la mercancía de la marca, la almacenamos, preparamos y embalamos cada pedido y lo dejamos listo para el transportista. El cliente factura el transporte directamente con la agencia, pero accede a **nuestras tarifas negociadas**.
 
 **Promesa:** *"Tú vende y crece. Nosotros nos encargamos de que cada pedido salga bien y a tiempo."*
 
@@ -110,7 +110,7 @@ Tiene tienda física y el ecommerce le está desbordando. Valora la confianza y 
 
 > El mercado ya fija el ancla: **unos 480 € por 300 pedidos (1,60 €/pedido)**. Cobrar 300 € es regalar margen y además da imagen de "barato", lo que genera desconfianza.
 
-**Propuesta Packia (cuota fija por tramos, igual de clara que la de LOPI):**
+**Propuesta Kargia (cuota fija por tramos, igual de clara que la de LOPI):**
 
 | Plan | Pedidos/mes | Referencias | Precio orientativo | Exceso |
 |---|---|---|---|---|
@@ -119,7 +119,7 @@ Tiene tienda física y el ecommerce le está desbordando. Valora la confianza y 
 | Escala | 1.000 | 150 | 1.150–1.250 € | 1,20 €/pedido |
 
 - **Material de embalaje:**
-  - *Estándar* (bolsa o caja neutra, relleno, cinta, etiqueta): lo pone Packia y va incluido en la cuota. Se compra al por mayor y garantiza que ningún pedido se para.
+  - *Estándar* (bolsa o caja neutra, relleno, cinta, etiqueta): lo pone Kargia y va incluido en la cuota. Se compra al por mayor y garantiza que ningún pedido se para.
   - *De marca* (cajas personalizadas, tarjetas, pegatinas, flyers, muestras): **lo aporta el cliente** y se gestiona como un stock más en el panel. Un inserto incluido; cada inserto o manipulación extra cuesta 0,10–0,30 €.
   - Si al cliente se le acaba su material, el pedido sale con el estándar (cobrado aparte) y se le avisa de que repongan.
 - Almacenaje incluido hasta un límite (por ejemplo 2 palets o X estanterías). A partir de ahí, por palet extra.

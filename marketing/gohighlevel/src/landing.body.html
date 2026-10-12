@@ -36,7 +36,7 @@
 </div></section>
 
 <section class="band"><div class="wrap">
-  <div class="center"><span class="eyebrow">Por qué <span data-pk="brand.name">Packia</span></span><h2 style="margin-top:14px">Logística cercana, con tecnología propia</h2></div>
+  <div class="center"><span class="eyebrow">Por qué <span data-pk="brand.name">Kargia</span></span><h2 style="margin-top:14px">Logística cercana, con tecnología propia</h2></div>
   <div class="cards">
     <div class="card"><div class="ico">🎯</div><h3>Cero errores como objetivo</h3><p>Cada producto se valida al llegar y se escanea al preparar. Si algo no cuadra, no sale.</p></div>
     <div class="card"><div class="ico">💶</div><h3>Cuota fija</h3><p>Sabes lo que pagas cada mes. Sin cobros por movimiento ni sorpresas.</p></div>
@@ -58,7 +58,7 @@
   <div class="final">
     <span class="eyebrow">Plazas limitadas</span>
     <h2 style="margin-top:14px">Pide tu propuesta en 1 minuto</h2>
-    <p class="lead">Cuéntanos sobre tu tienda y te decimos cuánto te costaría con <span data-pk="brand.name">Packia</span>. Sin compromiso.</p>
+    <p class="lead">Cuéntanos sobre tu tienda y te decimos cuánto te costaría con <span data-pk="brand.name">Kargia</span>. Sin compromiso.</p>
     <div class="scarcity">⚡ Aceptamos pocas tiendas nuevas cada mes para garantizar el servicio</div>
     {{FORM}}
   </div>
@@ -66,7 +66,7 @@
 
 <section style="padding-top:0"><div class="wrap">
   <div class="faq">
-    <details><summary>¿Tengo que cambiar algo de mi tienda?</summary><p>No. Conectamos <span data-pk="brand.name">Packia</span> a tu Shopify o WooCommerce y los pedidos nos llegan solos. El seguimiento vuelve a tu tienda.</p></details>
+    <details><summary>¿Tengo que cambiar algo de mi tienda?</summary><p>No. Conectamos <span data-pk="brand.name">Kargia</span> a tu Shopify o WooCommerce y los pedidos nos llegan solos. El seguimiento vuelve a tu tienda.</p></details>
     <details><summary>Hago menos de 300 pedidos, ¿puedo entrar?</summary><p>Nuestro servicio está pensado a partir de unos 300 pedidos al mes. Si estás cerca, déjanos tus datos igualmente y lo valoramos.</p></details>
     <details><summary>¿Hay permanencia?</summary><p>No. Pagas mes a mes y empiezas con 2 semanas de prueba.</p></details>
     <details><summary>¿Cómo sé que mis pedidos salen bien?</summary><p>Tienes tu propio panel con cada pedido, su estado y su seguimiento en tiempo real, además de tu stock y tus facturas.</p></details>
@@ -75,7 +75,7 @@
 
 <footer><div class="wrap">
   {{LOGO}}
-  <span>© <span data-pk="brand.name">Packia</span> · Logística para tiendas online · <a href="mailto:{{EMAIL}}">{{EMAIL}}</a></span>
+  <span>© <span data-pk="brand.name">Kargia</span> · Logística para tiendas online · <a href="mailto:{{EMAIL}}">{{EMAIL}}</a></span>
 </div></footer>
 <div class="mcta"><a href="#formulario" class="btn btn-p">Pedir propuesta</a><a href="https://wa.me/{{WHATSAPP}}?text={{WA_TEXT}}" class="btn btn-w">WhatsApp</a></div>
 </div>
@@ -92,10 +92,10 @@
     if(b&&b.name){
       all('[data-pk="brand.name"]',function(el){el.textContent=b.name});
       all('[data-pk="brand.tagline"]',function(el){el.textContent=b.tagline||""});
-      if(b.name!=="Packia")all('[data-pk-wordmark]',function(el){el.textContent=b.name});
+      if(b.name!=="Kargia")all('[data-pk-wordmark]',function(el){el.textContent=b.name});
       if(b.logo)all('[data-pk-logo]',function(el){var i=document.createElement("img");i.src=b.logo;i.alt=b.name;i.width=38;i.height=38;i.style.borderRadius="11px";i.style.objectFit="contain";el.replaceWith(i)});
-      document.title=document.title.replace(/Packia/g,b.name);
-      all('a[href*="wa.me"]',function(a){a.href=a.href.replace(/Packia/g,encodeURIComponent(b.name))});
+      document.title=document.title.replace(/Kargia/g,b.name);
+      all('a[href*="wa.me"]',function(a){a.href=a.href.replace(/Kargia/g,encodeURIComponent(b.name))});
     }
     var min=null;
     (d.plans||[]).forEach(function(p){

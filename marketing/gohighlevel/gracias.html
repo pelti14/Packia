@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Packia · ¡Gracias!</title>
+<title>Kargia · ¡Gracias!</title>
 <meta name="description" content="Hemos recibido tu solicitud.">
 <style>html{scroll-behavior:smooth}body{margin:0;background:#f5f7fb}</style>
 </head>
@@ -147,13 +147,13 @@
 @media(max-width:520px){.pk .mock-title{font-size:.9rem}.pk .clock{font-size:.68rem;padding:5px 8px}.pk .stat div{font-size:1.3rem}}
 </style>
 <div class="pk" id="inicio" style="min-height:100vh">
-<nav class="nav"><div class="wrap"><a href="#inicio" class="logo"><svg data-pk-logo width="38" height="38" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="pkg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3a52f0"/><stop offset=".55" stop-color="#4f6bff"/><stop offset="1" stop-color="#12c8d9"/></linearGradient></defs><rect width="40" height="40" rx="11" fill="url(#pkg)"/><path d="M20 8.5 30 14v12l-10 5.5L10 26V14z" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/><path d="M10 14l10 5.5L30 14M20 19.5v12" fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round" opacity=".8"/><circle cx="30" cy="10" r="2.6" fill="#a5f3fc"/></svg><span><b data-pk-wordmark>pack<span class="grad">ia</span></b><small data-pk="brand.tagline">fulfillment</small></span></a></div></nav>
+<nav class="nav"><div class="wrap"><a href="#inicio" class="logo"><svg data-pk-logo width="38" height="38" viewBox="25 31 141 141" aria-hidden="true"><rect x="25" y="31" width="141" height="141" rx="32" fill="#0b0b0d"/><path d="M60 51H96L54 98L88 140H33V79Z" fill="#f0f0f0" stroke="#f0f0f0" stroke-width="3" stroke-linejoin="round"/><path d="M117 51H153L108 100L156 152H120L72 100Z" fill="#c3fc1d" stroke="#c3fc1d" stroke-width="3" stroke-linejoin="round"/></svg><span><b data-pk-wordmark>kargia</b><small data-pk="brand.tagline">fulfillment</small></span></a></div></nav>
 <section class="hero" style="padding:100px 0"><div class="grid-bg"></div><div class="glow" style="width:420px;height:420px;background:#22c993;top:-160px;left:50%;margin-left:-210px;opacity:.3"></div>
 <div class="wrap center" style="position:relative">
   <div class="ico" style="margin:0 auto 22px;width:64px;height:64px;font-size:1.8rem;background:#e7faf3;box-shadow:inset 0 0 0 1px rgba(34,201,147,.3)">✓</div>
   <h1>¡Recibido! <span class="grad">Te escribimos muy pronto.</span></h1>
   <p class="lead">En menos de 1 hora (en horario laboral) te contactamos por WhatsApp para hacerte un par de preguntas y prepararte la propuesta.</p>
-  <div class="row"><a href="https://wa.me/34600000000?text=Hola%2C%20tengo%20una%20tienda%20online%20y%20quiero%20informaci%C3%B3n%20sobre%20Packia" class="btn btn-w">Adelantarme por WhatsApp</a></div>
+  <div class="row"><a href="https://wa.me/34600000000?text=Hola%2C%20tengo%20una%20tienda%20online%20y%20quiero%20informaci%C3%B3n%20sobre%20Kargia" class="btn btn-w">Adelantarme por WhatsApp</a></div>
   <div class="cards" style="text-align:left;max-width:900px;margin-left:auto;margin-right:auto">
     <div class="glass card"><span class="num">PASO 1</span><h3>Llamada de 15 minutos</h3><p>Vemos tus pedidos, tus productos y cómo envías hoy.</p></div>
     <div class="glass card"><span class="num">PASO 2</span><h3>Propuesta en 24 h</h3><p>Precio cerrado y lo que te ahorras frente a hacerlo tú.</p></div>
@@ -175,10 +175,10 @@
     if(b&&b.name){
       all('[data-pk="brand.name"]',function(el){el.textContent=b.name});
       all('[data-pk="brand.tagline"]',function(el){el.textContent=b.tagline||""});
-      if(b.name!=="Packia")all('[data-pk-wordmark]',function(el){el.textContent=b.name});
+      if(b.name!=="Kargia")all('[data-pk-wordmark]',function(el){el.textContent=b.name});
       if(b.logo)all('[data-pk-logo]',function(el){var i=document.createElement("img");i.src=b.logo;i.alt=b.name;i.width=38;i.height=38;i.style.borderRadius="11px";i.style.objectFit="contain";el.replaceWith(i)});
-      document.title=document.title.replace(/Packia/g,b.name);
-      all('a[href*="wa.me"]',function(a){a.href=a.href.replace(/Packia/g,encodeURIComponent(b.name))});
+      document.title=document.title.replace(/Kargia/g,b.name);
+      all('a[href*="wa.me"]',function(a){a.href=a.href.replace(/Kargia/g,encodeURIComponent(b.name))});
     }
     var min=null;
     (d.plans||[]).forEach(function(p){

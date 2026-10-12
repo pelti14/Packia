@@ -1,4 +1,4 @@
-# Chuleta: variables de entorno de Packia
+# Chuleta: variables de entorno de Kargia
 
 Dónde sacar cada variable, paso a paso, para cuando haya que volver a ponerlas: un hosting nuevo, otro servidor o un cambio de claves.
 
@@ -70,7 +70,7 @@ Cómo distinguirlas:
 ### Si no recuerdas la contraseña de la base de datos
 Supabase no la vuelve a mostrar nunca. Para crear una nueva:
 1. Ve a **Project Settings → Database → Reset database password**.
-2. Escribe una **solo con letras y números**, por ejemplo `Packia2026Almacen`. Los símbolos `@ # / ? : %` rompen la dirección.
+2. Escribe una **solo con letras y números**, por ejemplo `Kargia2026Almacen`. Los símbolos `@ # / ? : %` rompen la dirección.
 3. Guárdala en tu gestor de contraseñas.
 4. Actualiza `DATABASE_URL` y `DIRECT_URL` en Hostinger y pulsa **Redeploy**.
 

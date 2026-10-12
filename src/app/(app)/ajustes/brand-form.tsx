@@ -28,7 +28,7 @@ export function BrandForm({ publicUrl }: { publicUrl: string }) {
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="label" htmlFor="brandName">Nombre comercial</label>
-            <input id="brandName" name="brandName" defaultValue={v.brandName ?? (brand.name === "Packia" ? "" : brand.name)} placeholder="Packia" maxLength={40} className="input" />
+            <input id="brandName" name="brandName" defaultValue={v.brandName ?? (brand.name === "Kargia" ? "" : brand.name)} placeholder="Kargia" maxLength={40} className="input" />
           </div>
           <div>
             <label className="label" htmlFor="brandTagline">Texto bajo el nombre</label>
@@ -58,7 +58,7 @@ export function BrandForm({ publicUrl }: { publicUrl: string }) {
         {state?.success && <Notice tone="success">{state.success}</Notice>}
         <SubmitButton className="w-full">Guardar marca</SubmitButton>
         <p className="text-xs text-ink-400">
-          Déjalo vacío para usar «Packia». Tu web de GoHighLevel lee nombre, logo y precios de <span className="mono break-all">{publicUrl}</span> y se actualiza sola.
+          Déjalo vacío para usar «Kargia» y su logo. Tu web de GoHighLevel lee nombre, logo y precios de <span className="mono break-all">{publicUrl}</span> y se actualiza sola.
         </p>
       </form>
     </Card>

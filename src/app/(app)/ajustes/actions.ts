@@ -127,5 +127,5 @@ export async function saveBrand(_: FormState, form: FormData): Promise<FormState
   }
   await db.appSettings.upsert({ where: { id: "default" }, create: { id: "default", ...data }, update: data });
   revalidatePath("/", "layout");
-  return { success: name ? `Marca guardada: ${name}` : "Marca guardada (se usa «Packia»)", values };
+  return { success: name ? `Marca guardada: ${name}` : "Marca guardada (se usa «Kargia»)", values };
 }

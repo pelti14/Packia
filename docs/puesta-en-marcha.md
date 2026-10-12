@@ -1,6 +1,6 @@
 # Puesta en marcha: Supabase + Hostinger
 
-Guía paso a paso para tener Packia online en tu dominio. Tiempo estimado: unos 30 minutos.
+Guía paso a paso para tener Kargia online en tu dominio. Tiempo estimado: unos 30 minutos.
 
 **Qué vas a hacer**
 
@@ -39,7 +39,7 @@ Abre un bloc de notas y ve pegando estos valores:
 - Si Supabase te enseña claves nuevas (*publishable* / *secret*) y además una pestaña **Legacy API keys**, lo más seguro es usar las de *Legacy* (`anon` y `service_role`).
 
 ### 1.3 Seguridad del login
-1. **Authentication → Sign In / Providers**: desactiva **Allow new users to sign up**. En Packia los usuarios los da de alta un administrador desde la app.
+1. **Authentication → Sign In / Providers**: desactiva **Allow new users to sign up**. En Kargia los usuarios los da de alta un administrador desde la app.
 2. **Authentication → URL Configuration** (hazlo cuando sepas tu dominio, paso 2):
    - **Site URL:** `https://tu-dominio.com`
    - **Redirect URLs:** añade `https://tu-dominio.com/auth/callback`
@@ -49,7 +49,7 @@ El servidor de email gratuito de Supabase envía muy pocos correos por hora. Usa
 - **Authentication → Emails → SMTP Settings** → *Enable custom SMTP*
   - Host: `smtp.hostinger.com` · Puerto: `465`
   - Usuario y contraseña: los de un buzón de Hostinger, por ejemplo `no-reply@tu-dominio.com`
-  - Sender email: ese mismo buzón · Sender name: `Packia`
+  - Sender email: ese mismo buzón · Sender name: `Kargia`
 
 > **Las tablas no se crean aquí.** Las crea la app en el paso 3 con un botón. Si lo prefieres, puedes pegar el archivo `supabase/setup.sql` en **SQL Editor → New query → Run**.
 
@@ -87,7 +87,7 @@ Las variables que empiezan por `NEXT_PUBLIC_` se integran en la app al compilar.
 
 ## 3. Asistente de configuración (≈2 min)
 
-Abre `https://tu-dominio.com`. Mientras falte algo, Packia te lleva solo a **/setup**:
+Abre `https://tu-dominio.com`. Mientras falte algo, Kargia te lleva solo a **/setup**:
 
 1. **Variables de entorno**: te dice cuáles faltan y dónde están en Supabase. Si falta `ENCRYPTION_KEY`, te muestra una generada:
    - cópiala,
@@ -113,20 +113,20 @@ Cuando existe el administrador, `/setup` queda bloqueado.
 
 ---
 
-## Actualizar Packia más adelante
+## Actualizar Kargia más adelante
 1. Sube la versión nueva:
    - **Con GitHub:** haz `git push` y Hostinger vuelve a desplegar.
    - **Con ZIP:** en hPanel → tu Node.js Web App → sube el ZIP nuevo → **Redeploy**. Las variables de entorno se mantienen.
-2. Entra en Packia como administrador. Si la versión trae cambios de base de datos, verás **«Actualización pendiente»**. Pulsa **Actualizar ahora**. Tus datos se mantienen y la app se abre sola al terminar.
+2. Entra en Kargia como administrador. Si la versión trae cambios de base de datos, verás **«Actualización pendiente»**. Pulsa **Actualizar ahora**. Tus datos se mantienen y la app se abre sola al terminar.
 
 ## Sincronización automática
-Packia trae los pedidos nuevos de todas las tiendas **cada minuto** desde el propio servidor, sin configurar nada. Si en algún momento ves que no llegan:
+Kargia trae los pedidos nuevos de todas las tiendas **cada minuto** desde el propio servidor, sin configurar nada. Si en algún momento ves que no llegan:
 1. Añade la variable `CRON_SECRET` con una clave larga cualquiera y pulsa **Redeploy**.
 2. En hPanel → **Avanzado → Cron Jobs**, crea una tarea cada minuto (o cada 5) que llame a:
    ```
    curl -s "https://tu-dominio.com/api/cron/sync?key=TU_CRON_SECRET"
    ```
-   Packia evita que se ejecuten dos sincronizaciones a la vez.
+   Kargia evita que se ejecuten dos sincronizaciones a la vez.
 
 ## Problemas frecuentes
 

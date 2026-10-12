@@ -7,11 +7,11 @@ subs = {
   "{{MOCK}}": (src/"mock.html").read_text().strip(),
   "{{FORM}}": (src/"form.html").read_text().strip(),
 }
-vals = {"{{PACKIA_URL}}": "https://floralwhite-dugong-101545.hostingersite.com", "{{WHATSAPP}}": "34600000000", "{{EMAIL}}": "hola@packia.es",
-        "{{WA_TEXT}}": urllib.parse.quote("Hola, tengo una tienda online y quiero información sobre Packia")}
-pages = {"web-packia.html": ("web.body.html", "Packia · Logística para tiendas online", "Guardamos tu stock, preparamos y enviamos los pedidos de tu tienda Shopify o WooCommerce el mismo día. Cuota fija, sin permanencia."),
-         "landing-meta-ads.html": ("landing.body.html", "Packia · Pide tu propuesta", "Deja de empaquetar: preparamos y enviamos los pedidos de tu tienda online el mismo día. Desde 480 €/mes, sin permanencia."),
-         "gracias.html": ("gracias.body.html", "Packia · ¡Gracias!", "Hemos recibido tu solicitud.")}
+vals = {"{{PACKIA_URL}}": "https://floralwhite-dugong-101545.hostingersite.com", "{{WHATSAPP}}": "34600000000", "{{EMAIL}}": "hola@kargia.eu",
+        "{{WA_TEXT}}": urllib.parse.quote("Hola, tengo una tienda online y quiero información sobre Kargia")}
+pages = {"web-kargia.html": ("web.body.html", "Kargia · Logística para tiendas online", "Guardamos tu stock, preparamos y enviamos los pedidos de tu tienda Shopify o WooCommerce el mismo día. Cuota fija, sin permanencia."),
+         "landing-meta-ads.html": ("landing.body.html", "Kargia · Pide tu propuesta", "Deja de empaquetar: preparamos y enviamos los pedidos de tu tienda online el mismo día. Desde 480 €/mes, sin permanencia."),
+         "gracias.html": ("gracias.body.html", "Kargia · ¡Gracias!", "Hemos recibido tu solicitud.")}
 for name, (body, title, desc) in pages.items():
     b = (src/body).read_text()
     for k, v in subs.items(): b = b.replace(k, v)

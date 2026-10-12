@@ -1,4 +1,4 @@
-# Packia — Estrategia de 0 a 10.000 €/mes
+# Kargia — Estrategia de 0 a 10.000 €/mes
 
 > Plan operativo paso a paso: montar la empresa, captar clientes, cerrarlos y escalar.
 > Documento vivo. Última revisión: 12/10/2026. Ver también [`cliente-ideal.md`](cliente-ideal.md).
@@ -85,7 +85,7 @@ Escribir en una página cada uno (después se meten en la app):
 
 **Hora de corte propuesta:** pedidos hasta las 14:00 salen el mismo día. Subir a las 16:00 cuando haya equipo.
 
-### 0.5 App Packia (Next.js): solo el mínimo para arrancar
+### 0.5 App Kargia (Next.js): solo el mínimo para arrancar
 No construir nada que no pida un cliente real. Orden de prioridad:
 1. **Integración Shopify + WooCommerce**: importar pedidos automáticamente (webhooks).
 2. **Catálogo e inventario** por cliente: referencias, stock y ubicación.
@@ -102,7 +102,7 @@ No construir nada que no pida un cliente real. Orden de prioridad:
 - [ ] Perfil de LinkedIn del fundador optimizado ("Logística para tiendas Shopify y WooCommerce").
 - [ ] Ficha de Google Business.
 - [ ] **Fotos y vídeo reales del almacén y el packing**: generan confianza.
-- [ ] **Calculadora de ahorro** (hoja de cálculo o página): lo que le cuesta hoy al cliente frente a Packia.
+- [ ] **Calculadora de ahorro** (hoja de cálculo o página): lo que le cuesta hoy al cliente frente a Kargia.
 
 ---
 
@@ -145,7 +145,7 @@ Guardar en una hoja de cálculo o CRM con estas columnas: tienda, URL, plataform
 >
 > Hola [nombre]:
 > Si preparáis unos [X] pedidos al mes, entre preparación, material, espacio y vuestras horas os está costando unos **[Y] €/mes**, aunque no aparezca en ninguna factura.
-> En Packia lo hacemos por **[cuota] €/mes fijos**: recepción, almacenaje, preparación, devoluciones y soporte por WhatsApp. Sin cobros por movimiento ni permanencia. Integración directa con [Shopify/WooCommerce].
+> En Kargia lo hacemos por **[cuota] €/mes fijos**: recepción, almacenaje, preparación, devoluciones y soporte por WhatsApp. Sin cobros por movimiento ni permanencia. Integración directa con [Shopify/WooCommerce].
 > ¿Te viene bien una llamada de 15 minutos esta semana para ver si encaja?
 > [Firma + WhatsApp]
 
@@ -243,7 +243,7 @@ Con los primeros clientes, **la operación ES el marketing**:
 **Filtro automático:** menos de 150 pedidos → respuesta amable + recurso gratuito (guía "Cómo preparar tu tienda para escalar") y se guardan para más adelante. Entre 150 y 300 → valorar. 300 o más → **llamada prioritaria**.
 
 ### 3.2 Contacto en menos de 1 hora
-Mensaje por WhatsApp: "Hola [nombre], soy [tú] de Packia. He visto tu solicitud de [tienda]. ¿Te va bien una llamada de 15 min hoy o mañana para ver si encajamos?"
+Mensaje por WhatsApp: "Hola [nombre], soy [tú] de Kargia. He visto tu solicitud de [tienda]. ¿Te va bien una llamada de 15 min hoy o mañana para ver si encajamos?"
 
 ### 3.3 Llamada de diagnóstico (15–20 min): guion
 1. **Contexto (2 min):** "Cuéntame de tu tienda: qué vendes y cómo va el último año".

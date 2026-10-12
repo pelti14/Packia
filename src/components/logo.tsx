@@ -11,33 +11,18 @@ export function LogoMark({ className }: { className?: string }) {
     return <img src={brand.logo} alt={brand.name} className={clsx("h-9 w-9 shrink-0 rounded-[11px] object-contain", className)} />;
   }
   return (
-    <svg viewBox="0 0 40 40" className={clsx("h-9 w-9", className)} aria-hidden>
-      <defs>
-        <linearGradient id="packia-g" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#3a52f0" />
-          <stop offset="0.55" stopColor="#4f6bff" />
-          <stop offset="1" stopColor="#12c8d9" />
-        </linearGradient>
-      </defs>
-      <rect width="40" height="40" rx="11" fill="url(#packia-g)" />
-      <path d="M20 8.5 30 14v12l-10 5.5L10 26V14z" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinejoin="round" />
-      <path d="M10 14l10 5.5L30 14M20 19.5v12" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinejoin="round" opacity=".8" />
-      <circle cx="30" cy="10" r="2.6" fill="#a5f3fc" />
+    <svg viewBox="25 31 141 141" className={clsx("h-9 w-9 shrink-0", className)} aria-hidden>
+      <rect x="25" y="31" width="141" height="141" rx="32" fill="#0b0b0d" />
+      <path d="M60 51H96L54 98L88 140H33V79Z" fill="#f0f0f0" stroke="#f0f0f0" strokeWidth="3" strokeLinejoin="round" />
+      <path d="M117 51H153L108 100L156 152H120L72 100Z" fill="#c3fc1d" stroke="#c3fc1d" strokeWidth="3" strokeLinejoin="round" />
     </svg>
   );
 }
 
-/** Nombre con estilo: las 2 últimas letras con degradado, como «pack·ia». */
-export function BrandWordmark({ className, plain }: { className?: string; plain?: boolean }) {
+/** Nombre de la marca (la de serie en minúsculas, como el dominio: «kargia»). */
+export function BrandWordmark({ className }: { className?: string; plain?: boolean }) {
   const { name } = useBrand();
-  const lower = name === "Packia" ? "packia" : name;
-  const cut = lower.length > 4 && !lower.includes(" ") ? lower.length - 2 : lower.length;
-  return (
-    <span className={className}>
-      {lower.slice(0, cut)}
-      {cut < lower.length && <span className={plain ? undefined : "text-gradient"}>{lower.slice(cut)}</span>}
-    </span>
-  );
+  return <span className={className}>{name === "Kargia" ? "kargia" : name}</span>;
 }
 
 export function Logo() {

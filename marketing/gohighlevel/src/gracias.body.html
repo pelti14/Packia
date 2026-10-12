@@ -27,10 +27,10 @@
     if(b&&b.name){
       all('[data-pk="brand.name"]',function(el){el.textContent=b.name});
       all('[data-pk="brand.tagline"]',function(el){el.textContent=b.tagline||""});
-      if(b.name!=="Packia")all('[data-pk-wordmark]',function(el){el.textContent=b.name});
+      if(b.name!=="Kargia")all('[data-pk-wordmark]',function(el){el.textContent=b.name});
       if(b.logo)all('[data-pk-logo]',function(el){var i=document.createElement("img");i.src=b.logo;i.alt=b.name;i.width=38;i.height=38;i.style.borderRadius="11px";i.style.objectFit="contain";el.replaceWith(i)});
-      document.title=document.title.replace(/Packia/g,b.name);
-      all('a[href*="wa.me"]',function(a){a.href=a.href.replace(/Packia/g,encodeURIComponent(b.name))});
+      document.title=document.title.replace(/Kargia/g,b.name);
+      all('a[href*="wa.me"]',function(a){a.href=a.href.replace(/Kargia/g,encodeURIComponent(b.name))});
     }
     var min=null;
     (d.plans||[]).forEach(function(p){
