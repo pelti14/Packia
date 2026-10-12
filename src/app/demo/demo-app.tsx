@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { clsx } from "clsx";
 import {
-  BadgeCheck, Boxes, Eye, FileDown, LayoutDashboard, PackageCheck, PackagePlus, Plus, Receipt, RotateCcw, RotateCw, ScanBarcode, Truck, TriangleAlert, Users,
+  BadgeCheck, Boxes, Eye, FileDown, Printer, LayoutDashboard, PackageCheck, PackagePlus, Plus, Receipt, RotateCcw, RotateCw, ScanBarcode, Truck, TriangleAlert, Users,
   type LucideIcon,
 } from "lucide-react";
 import { PickList, type PickItem } from "@/components/pick-list";
@@ -15,13 +15,13 @@ import type { PlanOption } from "@/lib/plans";
 
 type Product = { id: string; sku: string; name: string; location: string; stock: number; barcode: string; validated: boolean };
 type Line = { id: string; sku: string; quantity: number };
-type Order = { id: string; number: string; customer: string; city: string; platform: "SHOPIFY" | "WOOCOMMERCE"; status: OrderStatus; items: Line[]; minutesAgo: number; carrier: string; tracking?: string };
+type Order = { id: string; number: string; customer: string; city: string; platform: "SHOPIFY" | "WOOCOMMERCE"; status: OrderStatus; items: Line[]; minutesAgo: number; carrier: string; tracking?: string; printed?: boolean };
 type Inbound = { id: string; ref: string; status: "EXPECTED" | "RECEIVED"; items: { sku: string; quantity: number }[] };
 type Ret = { id: string; order: string; reason: string; status: "OPEN" | "RESTOCKED"; items: { sku: string; quantity: number }[] };
 type State = { products: Product[]; orders: Order[]; inbounds: Inbound[]; returns: Ret[]; nextNumber: number; log: string[] };
 
 const CLIENT = "Lumen Cosmetics";
-const STORAGE = "packia:demo:state";
+const STORAGE = "packia:demo:state:v2";
 
 const initial = (): State => ({
   products: [
@@ -36,8 +36,8 @@ const initial = (): State => ({
     { id: "o1", number: "#1041", customer: "Laura Gómez", city: "Madrid", platform: "SHOPIFY", status: "PENDING", minutesAgo: 35, carrier: "GLS", items: [{ id: "l1", sku: "LUM-CRE-50", quantity: 1 }, { id: "l2", sku: "LUM-LIM-200", quantity: 2 }] },
     { id: "o2", number: "#1042", customer: "Marta Ruiz", city: "Valencia", platform: "SHOPIFY", status: "PENDING", minutesAgo: 22, carrier: "GLS", items: [{ id: "l3", sku: "LUM-SER-30", quantity: 1 }, { id: "l4", sku: "LUM-CRE-50", quantity: 1 }] },
     { id: "o3", number: "#1043", customer: "Jordi Puig", city: "Barcelona", platform: "WOOCOMMERCE", status: "PENDING", minutesAgo: 9, carrier: "MRW", items: [{ id: "l5", sku: "LUM-TON-150", quantity: 1 }, { id: "l6", sku: "LUM-NEC-01", quantity: 1 }] },
-    { id: "o4", number: "#1039", customer: "Ana López", city: "Sevilla", platform: "SHOPIFY", status: "SHIPPED", minutesAgo: 1440, carrier: "GLS", tracking: "PK261011A1B2C3", items: [{ id: "l7", sku: "LUM-CON-15", quantity: 1 }] },
-    { id: "o5", number: "#1040", customer: "Pablo Martín", city: "Bilbao", platform: "SHOPIFY", status: "SHIPPED", minutesAgo: 1300, carrier: "GLS", tracking: "PK261011D4E5F6", items: [{ id: "l8", sku: "LUM-CRE-50", quantity: 2 }] },
+    { id: "o4", number: "#1039", customer: "Ana López", city: "Sevilla", platform: "SHOPIFY", status: "SHIPPED", minutesAgo: 1440, carrier: "GLS", tracking: "PK261011A1B2C3", printed: true, items: [{ id: "l7", sku: "LUM-CON-15", quantity: 1 }] },
+    { id: "o5", number: "#1040", customer: "Pablo Martín", city: "Bilbao", platform: "SHOPIFY", status: "SHIPPED", minutesAgo: 1300, carrier: "GLS", tracking: "PK261011D4E5F6", printed: true, items: [{ id: "l8", sku: "LUM-CRE-50", quantity: 2 }] },
   ],
   inbounds: [
     { id: "i1", ref: "REC-0008", status: "EXPECTED", items: [{ sku: "LUM-CON-15", quantity: 40 }, { sku: "LUM-NEC-01", quantity: 50 }] },
@@ -51,7 +51,7 @@ const initial = (): State => ({
 
 const CUSTOMERS = [["Lucía Fernández", "Zaragoza"], ["Carlos Sánchez", "Málaga"], ["Elena Navarro", "Alicante"], ["Sergio Torres", "Valladolid"], ["Nuria Vidal", "Girona"]];
 
-type View = "panel" | "salida" | "preparar" | "inventario" | "recepcion" | "devoluciones" | "facturacion";
+type View = "panel" | "salida" | "preparar" | "etiquetas" | "inventario" | "recepcion" | "devoluciones" | "facturacion";
 type Viewer = "equipo" | "cliente";
 
 /* ───────────── App ───────────── */
@@ -133,6 +133,7 @@ export function DemoApp({ plans }: { plans: PlanOption[] }) {
   const nav: { key: View; label: string; icon: LucideIcon; count?: number; red?: boolean }[] = [
     { key: "panel", label: "Panel", icon: LayoutDashboard },
     { key: "salida", label: "Salida", icon: Truck, count: open.length },
+    ...(staff ? [{ key: "etiquetas" as View, label: "Etiquetas", icon: Printer, count: s.orders.filter((o) => o.status === "SHIPPED" && !o.printed).length }] : []),
     { key: "inventario", label: "Inventario", icon: Boxes, count: staff ? unvalidated.length : undefined, red: open.some((o) => blockersOf(o).length) },
     { key: "recepcion", label: "Recepción", icon: PackagePlus, count: s.inbounds.filter((i) => i.status === "EXPECTED").length },
     { key: "devoluciones", label: "Devoluciones", icon: RotateCcw, count: s.returns.filter((r) => r.status === "OPEN").length },
@@ -217,13 +218,13 @@ export function DemoApp({ plans }: { plans: PlanOption[] }) {
                 update(
                   (p) => ({
                     ...p,
-                    orders: p.orders.map((o) => (o.id === order.id ? { ...o, status: "SHIPPED", tracking } : o)),
+                    orders: p.orders.map((o) => (o.id === order.id ? { ...o, status: "SHIPPED", tracking, printed: false } : o)),
                     products: p.products.map((pr) => {
                       const line = order.items.find((i) => i.sku === pr.sku);
                       return line ? { ...pr, stock: Math.max(0, pr.stock - line.quantity) } : pr;
                     }),
                   }),
-                  `${order.number} enviado con ${order.carrier} · el cliente ya ve el seguimiento`,
+                  `${order.number} enviado con ${order.carrier} · etiqueta en «Etiquetas por imprimir»`,
                 );
                 const next = s.orders.find((o) => o.id !== order.id && ["PENDING", "PICKING"].includes(o.status));
                 if (next) setOrderId(next.id);
@@ -284,6 +285,13 @@ export function DemoApp({ plans }: { plans: PlanOption[] }) {
                 <p className="mt-3 text-sm text-ink-500">Los productos nuevos que llegan siguen <b>por validar</b> hasta que alguien del equipo les da el OK en Inventario.</p>
               )}
             </Section>
+          )}
+
+          {view === "etiquetas" && staff && (
+            <LabelQueue
+              orders={s.orders.filter((o) => o.status === "SHIPPED")}
+              onPrinted={(ids, printed) => update((p) => ({ ...p, orders: p.orders.map((o) => (ids.includes(o.id) ? { ...o, printed } : o)) }), printed ? `${ids.length} ${ids.length === 1 ? "etiqueta impresa" : "etiquetas impresas"}` : undefined)}
+            />
           )}
 
           {view === "devoluciones" && (
@@ -561,6 +569,73 @@ function Billing({ plans, shipped, returns }: { plans: PlanOption[]; shipped: nu
           <div className="flex justify-between pt-3 text-base font-bold text-ink-900"><span>Total</span><span className="mono">{eur(Math.round(base * 1.21))}</span></div>
         </div>
       </div>
+    </Section>
+  );
+}
+
+function LabelQueue({ orders, onPrinted }: { orders: Order[]; onPrinted: (ids: string[], printed: boolean) => void }) {
+  const [tab, setTab] = useState<"pending" | "printed">("pending");
+  const list = orders.filter((o) => (tab === "pending" ? !o.printed : o.printed));
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  useEffect(() => setSel(new Set(list.map((o) => o.id))), [tab, list.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  const chosen = list.filter((o) => sel.has(o.id));
+  const groups = list.reduce<Record<string, Order[]>>((g, o) => ((g[o.carrier] ??= []).push(o), g), {});
+  const toggle = (id: string) => setSel((x) => { const n = new Set(x); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const print = () => {
+    const q = new URLSearchParams({ orders: chosen.map((o) => o.number).join(","), carriers: chosen.map((o) => o.carrier).join(","), client: CLIENT });
+    window.open(`/demo/etiqueta?${q}`, "_blank");
+    onPrinted(chosen.map((o) => o.id), true);
+  };
+
+  return (
+    <Section title="Etiquetas" sub="Cada etiqueta que se crea al enviar llega aquí. Se seleccionan y se imprimen todas seguidas, ordenadas por agencia, en el formato de la impresora del almacén.">
+      <div className="mb-4 flex gap-1 rounded-xl bg-line/40 p-1 text-sm">
+        {(["pending", "printed"] as const).map((t) => (
+          <button key={t} onClick={() => setTab(t)} className={clsx("rounded-lg px-3 py-1.5 font-medium", tab === t ? "bg-white text-ink-900 shadow-sm" : "text-ink-500")}>
+            {t === "pending" ? "Por imprimir" : "Impresas"} ({orders.filter((o) => (t === "pending" ? !o.printed : o.printed)).length})
+          </button>
+        ))}
+      </div>
+      {list.length ? (
+        <>
+          <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl bg-white/90 p-3 ring-1 ring-line">
+            <label className="flex items-center gap-2 px-2 text-sm font-medium text-ink-700">
+              <input type="checkbox" checked={chosen.length === list.length} onChange={() => setSel(chosen.length === list.length ? new Set() : new Set(list.map((o) => o.id)))} className="h-4 w-4 accent-brand-500" />
+              Todas ({list.length})
+            </label>
+            <button disabled={!chosen.length} onClick={print} className="btn-primary disabled:opacity-50">
+              <Printer className="h-4 w-4" /> Imprimir {chosen.length} {chosen.length === 1 ? "etiqueta" : "etiquetas"}
+            </button>
+            {tab === "printed" && (
+              <button disabled={!chosen.length} onClick={() => onPrinted(chosen.map((o) => o.id), false)} className="btn-ghost disabled:opacity-50">Volver a «Por imprimir»</button>
+            )}
+            <span className="text-xs text-ink-400">Salen todas en un solo PDF y se abre el diálogo de imprimir.</span>
+          </div>
+          <div className="space-y-4">
+            {Object.entries(groups).map(([carrier, rows]) => (
+              <div key={carrier} className="glass overflow-hidden">
+                <div className="border-b border-line/60 px-5 py-3 font-semibold text-ink-900">{carrier} <span className="text-sm font-normal text-ink-500">· {rows.length} {rows.length === 1 ? "etiqueta" : "etiquetas"}</span></div>
+                <ul className="divide-y divide-line/60">
+                  {rows.map((o) => (
+                    <li key={o.id}>
+                      <label className={clsx("flex cursor-pointer items-center gap-4 px-5 py-3 text-sm", sel.has(o.id) && "bg-brand-50/50")}>
+                        <input type="checkbox" checked={sel.has(o.id)} onChange={() => toggle(o.id)} className="h-4 w-4 accent-brand-500" />
+                        <span className="mono w-16 font-semibold text-ink-900">{o.number}</span>
+                        <span className="flex-1 text-ink-700">{o.customer} <span className="text-ink-400">· {o.city}</span></span>
+                        <span className="mono text-xs text-ink-500">{o.tracking}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="glass p-10 text-center text-sm text-ink-500">
+          {tab === "pending" ? "No hay etiquetas por imprimir. Prepara y envía un pedido en Salida y aparecerá aquí." : "Aún no se ha impreso ninguna."}
+        </div>
+      )}
     </Section>
   );
 }
