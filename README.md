@@ -45,6 +45,7 @@ Documentación de negocio en [`docs/`](docs/): [cliente ideal](docs/cliente-idea
 ## Puesta en marcha
 
 👉 **Guía completa paso a paso: [docs/puesta-en-marcha.md](docs/puesta-en-marcha.md)** (Supabase + Hostinger).
+📋 **Chuleta de variables de entorno: [docs/variables-de-entorno.md](docs/variables-de-entorno.md)**.
 
 En resumen:
 1. Crea un proyecto en Supabase y copia las **6 variables** de `.env.example`.
