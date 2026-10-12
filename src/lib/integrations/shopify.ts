@@ -3,7 +3,7 @@ import type { ExternalOrder, ExternalProduct, Shipment } from "@/lib/types";
 
 type ShopifyCreds = { domain: string; accessToken: string };
 
-const API_VERSION = process.env.SHOPIFY_API_VERSION ?? "2025-07";
+const API_VERSION = process.env.SHOPIFY_API_VERSION ?? "2026-10";
 
 /** fetch con un mensaje entendible si la tienda no existe o no responde. */
 async function shopFetch(domain: string, url: string, init: RequestInit) {
@@ -83,11 +83,12 @@ const WEBHOOK_TOPICS = ["ORDERS_CREATE", "ORDERS_CANCELLED"] as const;
 
 /** Da de alta los webhooks de pedidos apuntando a Packia. Ignora los que ya existen. */
 export async function registerWebhooks(creds: ShopifyCreds, callbackUrl: string) {
-  const existing = await gql<{ webhookSubscriptions: { nodes: { topic: string; endpoint: { __typename: string; callbackUrl?: string } }[] } }>(
+  // Desde la API 2025-10 la dirección del webhook es el campo `uri` (antes `callbackUrl`).
+  const existing = await gql<{ webhookSubscriptions: { nodes: { topic: string; uri: string }[] } }>(
     creds,
-    `{ webhookSubscriptions(first: 50) { nodes { topic endpoint { __typename ... on WebhookHttpEndpoint { callbackUrl } } } } }`,
+    `{ webhookSubscriptions(first: 50) { nodes { topic uri } } }`,
   );
-  const has = (topic: string) => existing.webhookSubscriptions.nodes.some((n) => n.topic === topic && n.endpoint.callbackUrl === callbackUrl);
+  const has = (topic: string) => existing.webhookSubscriptions.nodes.some((n) => n.topic === topic && n.uri === callbackUrl);
   const created: string[] = [];
   for (const topic of WEBHOOK_TOPICS) {
     if (has(topic)) continue;
@@ -96,7 +97,7 @@ export async function registerWebhooks(creds: ShopifyCreds, callbackUrl: string)
       `mutation Create($topic: WebhookSubscriptionTopic!, $sub: WebhookSubscriptionInput!) {
         webhookSubscriptionCreate(topic: $topic, webhookSubscription: $sub) { webhookSubscription { id } userErrors { message } }
       }`,
-      { topic, sub: { callbackUrl, format: "JSON" } },
+      { topic, sub: { uri: callbackUrl, format: "JSON" } },
     );
     const errors = r.webhookSubscriptionCreate.userErrors.filter((e) => !/already been taken/i.test(e.message));
     if (errors.length) throw new Error(`Webhook ${topic}: ${errors.map((e) => e.message).join("; ")}`);
@@ -154,25 +155,18 @@ export async function fetchOpenOrders(creds: ShopifyCreds): Promise<ExternalOrde
 
 export async function fetchProducts(creds: ShopifyCreds): Promise<ExternalProduct[]> {
   const data = await gql<{
-    productVariants: {
-      nodes: { id: string; sku: string | null; displayName: string; image: { url: string } | null; product: { featuredImage: { url: string } | null } }[];
-    };
+    productVariants: { nodes: { id: string; sku: string | null; displayName: string }[] };
   }>(
     creds,
     `query Variants {
       productVariants(first: 250) {
-        nodes { id sku displayName image { url } product { featuredImage { url } } }
+        nodes { id sku displayName }
       }
     }`,
   );
   return data.productVariants.nodes
     .filter((v) => v.sku)
-    .map((v) => ({
-      externalId: v.id.split("/").pop()!,
-      sku: v.sku!,
-      name: v.displayName,
-      imageUrl: v.image?.url ?? v.product.featuredImage?.url ?? undefined,
-    }));
+    .map((v) => ({ externalId: v.id.split("/").pop()!, sku: v.sku!, name: v.displayName }));
 }
 
 /** Marca el pedido como preparado en Shopify con su número de seguimiento. */
