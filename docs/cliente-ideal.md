@@ -118,7 +118,10 @@ Tiene tienda física y el ecommerce le está desbordando. Valora la confianza y 
 | Crecimiento | 600 | 100 | 820–880 € | 1,30 €/pedido |
 | Escala | 1.000 | 150 | 1.150–1.250 € | 1,20 €/pedido |
 
-- Incluye bolsa estándar. La **caja de marca o el unboxing personalizado** son un extra (+0,30–0,80 €/pedido), y ese extra es margen.
+- **Material de embalaje:**
+  - *Estándar* (bolsa o caja neutra, relleno, cinta, etiqueta): lo pone Packia y va incluido en la cuota. Se compra al por mayor y garantiza que ningún pedido se para.
+  - *De marca* (cajas personalizadas, tarjetas, pegatinas, flyers, muestras): **lo aporta el cliente** y se gestiona como un stock más en el panel. Un inserto incluido; cada inserto o manipulación extra cuesta 0,10–0,30 €.
+  - Si al cliente se le acaba su material, el pedido sale con el estándar (cobrado aparte) y se le avisa de que repongan.
 - Almacenaje incluido hasta un límite (por ejemplo 2 palets o X estanterías). A partir de ahí, por palet extra.
 - **El transporte también es negocio:** revender una o dos agencias con margen (0,30–0,60 €/envío) aporta unos 90–180 € más al mes por cada cliente de 300 pedidos.
 
