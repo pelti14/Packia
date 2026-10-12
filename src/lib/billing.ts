@@ -130,7 +130,7 @@ export function usageFor(client: Client, month: string) {
 /** Hasta dónde está facturado un cliente dentro del mes (inicio del mes si nada). */
 export async function invoicedUntil(clientId: string, month: string) {
   const { start, end } = monthRange(month);
-  const last = await db.invoice.findFirst({ where: { clientId, periodStart: { gte: start, lt: end } }, orderBy: { periodEnd: "desc" }, select: { periodEnd: true } });
+  const last = await db.invoice.findFirst({ where: { clientId, ...LIVE, periodStart: { gte: start, lt: end } }, orderBy: { periodEnd: "desc" }, select: { periodEnd: true } });
   return last && last.periodEnd > start ? last.periodEnd : start;
 }
 
@@ -155,15 +155,14 @@ export async function issueInvoice(clientId: string, start: Date, end: Date) {
     throw new Error(usage.status === "TRIAL" ? "Está en periodo de prueba: no hay nada que facturar" : usage.status === "ENDED" ? "El servicio ya había terminado" : "No hay nada que facturar en ese periodo");
   }
   const taxCents = Math.round((usage.subtotalCents * TAX_RATE) / 100);
-  const year = dayKey(start).slice(0, 4);
+  const prefix = await invoicePrefix();
 
   return db.$transaction(async (tx) => {
-    const overlap = await tx.invoice.findFirst({ where: { clientId, periodStart: { lt: end }, periodEnd: { gt: start } } });
+    const overlap = await tx.invoice.findFirst({ where: { clientId, ...LIVE, periodStart: { lt: end }, periodEnd: { gt: start } } });
     if (overlap) throw new Error(`Ese periodo ya está en la factura ${overlap.number}`);
-    const count = await tx.invoice.count({ where: { number: { startsWith: `PK-${year}-` } } });
     return tx.invoice.create({
       data: {
-        number: `PK-${year}-${String(count + 1).padStart(4, "0")}`,
+        number: await nextNumber(tx, prefix),
         clientId,
         periodStart: start,
         periodEnd: end,
@@ -204,7 +203,98 @@ export async function issueMonthInvoice(clientId: string, month: string) {
   return issueInvoice(clientId, from, end);
 }
 
-/** Datos fiscales de Packia para la factura. */
+/** Facturas que cuentan: normales y no anuladas (las rectificativas y las anuladas no ocupan periodo). */
+const LIVE = { kind: "INVOICE", status: { not: "CANCELLED" } } as const;
+
+type Tx = Parameters<Parameters<typeof db.$transaction>[0]>[0];
+
+async function invoicePrefix() {
+  const s = await db.appSettings.findUnique({ where: { id: "default" }, select: { invoicePrefix: true } }).catch(() => null);
+  return (s?.invoicePrefix || "KG").toUpperCase();
+}
+
+/** Siguiente número correlativo de la serie en el año: KG-2026-0007 (o KGR-… para rectificativas). */
+async function nextNumber(tx: Tx, series: string, now = new Date()) {
+  const head = `${series}-${dayKey(now).slice(0, 4)}-`;
+  const rows = await tx.invoice.findMany({ where: { number: { startsWith: head } }, select: { number: true } });
+  const max = rows.reduce((m, r) => Math.max(m, Number(r.number.slice(head.length)) || 0), 0);
+  return `${head}${String(max + 1).padStart(4, "0")}`;
+}
+
+export type EditLine = { description: string; quantity: number; unitPriceCents: number };
+
+/** Crea la rectificativa (importes en negativo) que anula una factura, dentro de una transacción. */
+async function createCorrective(tx: Tx, id: string, reason: string, prefix: string) {
+  const inv = await tx.invoice.findUnique({ where: { id }, include: { lines: true } });
+  if (!inv) throw new Error("Factura no encontrada");
+  if (inv.kind !== "INVOICE") throw new Error("Una rectificativa no se puede anular; emite otra factura si hace falta");
+  if (inv.status === "CANCELLED") throw new Error("Esta factura ya está anulada");
+  const corrective = await tx.invoice.create({
+    data: {
+      number: await nextNumber(tx, `${prefix}R`),
+      kind: "CORRECTIVE",
+      clientId: inv.clientId,
+      periodStart: inv.periodStart,
+      periodEnd: inv.periodEnd,
+      subtotalCents: -inv.subtotalCents,
+      taxRate: inv.taxRate,
+      taxCents: -inv.taxCents,
+      totalCents: -inv.totalCents,
+      reason,
+      correctsId: inv.id,
+      lines: { create: inv.lines.map((l) => ({ description: l.description, quantity: l.quantity, unitPriceCents: -l.unitPriceCents, amountCents: -l.amountCents })) },
+    },
+  });
+  await tx.invoice.update({ where: { id: inv.id }, data: { status: "CANCELLED", cancelledAt: new Date(), reason } });
+  return { inv, corrective };
+}
+
+/**
+ * Anula una factura emitida. Una factura no se borra ni se edita: se emite una rectificativa
+ * en negativo (serie R) que la deja a cero, y el periodo queda libre para volver a facturarlo.
+ */
+export async function cancelInvoice(id: string, reason: string) {
+  if (!reason.trim()) throw new Error("Indica el motivo de la anulación");
+  const prefix = await invoicePrefix();
+  return db.$transaction((tx) => createCorrective(tx, id, reason.trim(), prefix));
+}
+
+/**
+ * Corrige una factura: la anula con su rectificativa y emite una nueva con las líneas corregidas,
+ * mismo cliente y periodo, enlazada a la original.
+ */
+export async function rectifyInvoice(id: string, lines: EditLine[], reason: string, taxRate?: number) {
+  if (!reason.trim()) throw new Error("Indica el motivo de la corrección");
+  const clean = lines
+    .map((l) => ({ description: l.description.trim().slice(0, 300), quantity: Math.round(l.quantity), unitPriceCents: Math.round(l.unitPriceCents) }))
+    .filter((l) => l.description && l.quantity !== 0);
+  if (!clean.length) throw new Error("La factura corregida necesita al menos una línea. Para dejarla a cero, usa «Anular».");
+  const prefix = await invoicePrefix();
+  return db.$transaction(async (tx) => {
+    const { inv, corrective } = await createCorrective(tx, id, reason.trim(), prefix);
+    const rate = taxRate ?? inv.taxRate;
+    const subtotal = clean.reduce((n, l) => n + l.quantity * l.unitPriceCents, 0);
+    const tax = Math.round((subtotal * rate) / 100);
+    const replacement = await tx.invoice.create({
+      data: {
+        number: await nextNumber(tx, prefix),
+        clientId: inv.clientId,
+        periodStart: inv.periodStart,
+        periodEnd: inv.periodEnd,
+        subtotalCents: subtotal,
+        taxRate: rate,
+        taxCents: tax,
+        totalCents: subtotal + tax,
+        reason: reason.trim(),
+        replacesId: inv.id,
+        lines: { create: clean.map((l) => ({ ...l, amountCents: l.quantity * l.unitPriceCents })) },
+      },
+    });
+    return { inv, corrective, replacement };
+  });
+}
+
+/** Datos fiscales de la empresa para la factura. */
 export async function issuer() {
   return (await getSettings()).company;
 }

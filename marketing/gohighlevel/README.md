@@ -34,6 +34,17 @@ Los archivos fuente están en `src/`. Para regenerar las páginas: `python3 mark
 3. En **Funnels**, pulsa **Create folder** (Nueva carpeta) → nombre **Kargia** → **Save**.
 4. Haz lo mismo en **Websites**: carpeta **Kargia**.
 
+## Colores de marca (para todo lo que hagas en GHL)
+| Uso | Color |
+|---|---|
+| Negro (fondos oscuros, textos) | `#0B0B0D` |
+| Lima (botones, resaltados) | `#C3FC1D` |
+| Blanco | `#FFFFFF` · fondo claro `#F5F5F2` |
+| Verde oliva (textos de acento sobre blanco) | `#567300` |
+| Gris de textos secundarios | `#5F6168` |
+
+En **Settings → Business Profile** sube el logo (`kargia-logo.svg` o un PNG) y pon como fondo de cada página `#F5F5F2`, para que no se vea una franja blanca alrededor del código pegado.
+
 ## 2. Crear la web
 1. **Sites → Websites → carpeta Kargia → + New Website → From blank**. Nombre: **Kargia · Web**.
 2. Pulsa **+ Add new page** → nombre **Inicio**, ruta `/` → **Edit**.
@@ -58,7 +69,10 @@ Los archivos fuente están en `src/`. Para regenerar las páginas: `python3 mark
    7. ¿Quién prepara hoy los pedidos? *(desplegable)*: Yo / Un empleado / Otro operador logístico
    8. ¿Cuál es tu principal problema hoy? *(texto largo, opcional)*
    9. Casilla de aceptación de la política de privacidad *(obligatoria)*
-3. Botón: **«Quiero mi propuesta»**. Color `#3a52f0`, bordes redondeados.
+3. Estilo del formulario, con los colores de Kargia:
+   - Botón **«Quiero mi propuesta»**: fondo `#C3FC1D` (lima), texto `#0B0B0D` (negro), negrita, bordes redondeados de 14 px.
+   - Campos: fondo blanco, borde `#E5E6E1`, bordes redondeados de 12 px, texto `#0B0B0D`.
+   - Etiquetas de los campos: `#5F6168`. Fondo del formulario: transparente o blanco.
 4. **Options → On submit → Open URL** → la dirección de la página de gracias (paso 4, la copias cuando la tengas).
 5. **Save** → **Integrate** → copia el **Embed code**.
 

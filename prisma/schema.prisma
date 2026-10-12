@@ -247,13 +247,15 @@ model ReturnItem {
 /// Factura mensual de un cliente.
 model Invoice {
   id            String        @id @default(cuid())
-  /// PK-2026-0001
+  /// KG-2026-0001 (normal) o KGR-2026-0001 (rectificativa)
   number        String        @unique
+  /// INVOICE (normal) | CORRECTIVE (rectificativa, importes en negativo)
+  kind          String        @default("INVOICE")
   clientId      String
   client        Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
   periodStart   DateTime
   periodEnd     DateTime
-  /// ISSUED | PAID
+  /// ISSUED | PAID | CANCELLED (anulada con su rectificativa)
   status        String        @default("ISSUED")
   subtotalCents Int
   taxRate       Int           @default(21)
@@ -261,9 +263,20 @@ model Invoice {
   totalCents    Int
   issuedAt      DateTime      @default(now())
   paidAt        DateTime?
+  cancelledAt   DateTime?
+  /// Motivo de la rectificación o anulación.
+  reason        String?
+  /// Rectificativa → factura que anula.
+  correctsId    String?
+  corrects      Invoice?      @relation("Corrections", fields: [correctsId], references: [id])
+  corrections   Invoice[]     @relation("Corrections")
+  /// Factura corregida → factura a la que sustituye.
+  replacesId    String?
+  replaces      Invoice?      @relation("Replacements", fields: [replacesId], references: [id])
+  replacements  Invoice[]     @relation("Replacements")
   lines         InvoiceLine[]
 
-  @@unique([clientId, periodStart])
+  @@index([clientId, periodStart])
 }
 
 model InvoiceLine {
@@ -297,6 +310,8 @@ model AppSettings {
   sendcloudSecretKey String?
   /// Emitir solo las facturas del mes anterior los días 1-5 de cada mes.
   autoInvoice        Boolean  @default(true)
+  /// Serie de facturación: KG → KG-2026-0001 y rectificativas KGR-2026-0001.
+  invoicePrefix      String   @default("KG")
   /// Impresora de etiquetas: THERMAL_100x150 | THERMAL_4x6 | A4_4 | A4_1
   printFormat        String   @default("THERMAL_100x150")
   /// Ajuste fino en milímetros (positivo = derecha / arriba).

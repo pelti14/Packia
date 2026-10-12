@@ -24,7 +24,7 @@ export default async function AjustesPage({ searchParams }: { searchParams: Prom
 
   const initial: Record<string, string> = {};
   if (settings) {
-    for (const [k, v] of Object.entries(settings)) if (typeof v === "string" && !k.startsWith("sendcloud")) initial[k] = v;
+    for (const [k, v] of Object.entries(settings)) if (typeof v === "string" && !k.startsWith("sendcloud") && k !== "brandLogo") initial[k] = v;
   }
 
   return (

@@ -30,6 +30,7 @@ export function SettingsForm({ initial, sendcloudSaved, autoInvoice }: { initial
         </div>
         <Field id="companyAddress" label="Dirección fiscal" initial={values} />
         <Field id="companyIban" label="IBAN para cobros" initial={values} placeholder="ES00 0000 0000 0000 0000 0000" />
+        <Field id="invoicePrefix" label="Serie de facturas (KG → KG-2026-0001; rectificativas KGR-…)" initial={values} placeholder="KG" />
       </section>
 
       <section className="glass space-y-4 p-6">

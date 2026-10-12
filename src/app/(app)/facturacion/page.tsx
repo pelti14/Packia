@@ -39,7 +39,7 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
   const pendingToIssue = pendings.filter((p) => p && p.subtotalCents > 0).length;
   const totalSubtotal = usages.reduce((s, u) => s + u.subtotalCents, 0);
   const totalShipped = usages.reduce((s, u) => s + u.shippedOrders, 0);
-  const pendingCents = invoices.filter((i) => i.status === "ISSUED").reduce((s, i) => s + i.totalCents, 0);
+  const pendingCents = invoices.filter((i) => i.status === "ISSUED" && i.kind === "INVOICE").reduce((s, i) => s + i.totalCents, 0);
 
   return (
     <>
@@ -132,7 +132,7 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
                     <td className="cell text-right">
                       <div className="flex flex-col items-end gap-1.5">
                         {invs.map((i) => (
-                          <Link key={i.id} href={`/facturacion/${i.id}`} className="mono text-sm font-semibold text-brand-600 hover:underline" title={invoicePeriodLabel(i)}>{i.number}</Link>
+                          <Link key={i.id} href={`/facturacion/${i.id}`} className={i.status === "CANCELLED" || i.kind === "CORRECTIVE" ? "mono text-xs text-ink-400 line-through hover:underline" : "mono text-sm font-semibold text-brand-600 hover:underline"} title={`${invoicePeriodLabel(i)}${i.status === "CANCELLED" ? " · anulada" : i.kind === "CORRECTIVE" ? " · rectificativa" : ""}`}>{i.number}</Link>
                         ))}
                         {pending && pending.subtotalCents > 0 ? (
                           admin ? (
@@ -179,8 +179,11 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
                     <td className="cell text-ink-700">{invoicePeriodLabel(i)}</td>
                     <td className="cell text-ink-500">{formatDateOnly(i.issuedAt)}</td>
                     <td className="cell mono text-right font-semibold text-ink-900">{eur(i.totalCents)}</td>
-                    <td className="cell"><Pill tone={i.status === "PAID" ? "mint" : "amber"}>{i.status === "PAID" ? "Pagada" : "Pendiente"}</Pill></td>
-                    {admin && (
+                    <td className="cell">
+                      {i.kind === "CORRECTIVE" ? <Pill tone="ink">Rectificativa</Pill> : i.status === "CANCELLED" ? <Pill tone="rose">Anulada</Pill> : <Pill tone={i.status === "PAID" ? "mint" : "amber"}>{i.status === "PAID" ? "Pagada" : "Pendiente"}</Pill>}
+                    </td>
+                    {admin && (i.kind !== "INVOICE" || i.status === "CANCELLED") && <td className="cell" />}
+                    {admin && i.kind === "INVOICE" && i.status !== "CANCELLED" && (
                       <td className="cell text-right">
                         <form action={setInvoicePaid.bind(null, i.id, i.status !== "PAID")}>
                           <SubmitButton variant="ghost" className="px-3 py-1.5">{i.status === "PAID" ? "Marcar pendiente" : "Marcar pagada"}</SubmitButton>

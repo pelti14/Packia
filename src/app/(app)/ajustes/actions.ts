@@ -33,9 +33,10 @@ export async function saveSettings(_: FormState, form: FormData): Promise<FormSt
   }
 
   const autoInvoice = form.get("autoInvoice") === "on";
-  await db.appSettings.upsert({ where: { id: "default" }, create: { id: "default", ...data, autoInvoice }, update: { ...data, autoInvoice } });
+  const invoicePrefix = str(form.get("invoicePrefix")).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6) || "KG";
+  await db.appSettings.upsert({ where: { id: "default" }, create: { id: "default", ...data, autoInvoice, invoicePrefix }, update: { ...data, autoInvoice, invoicePrefix } });
   revalidatePath("/", "layout");
-  const values = Object.fromEntries(TEXT_FIELDS.map((f) => [f, data[f] ?? ""]));
+  const values = { ...Object.fromEntries(TEXT_FIELDS.map((f) => [f, data[f] ?? ""])), invoicePrefix };
   return { success: "Ajustes guardados", values };
 }
 
