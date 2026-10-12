@@ -7,12 +7,19 @@ import { labelAndShip, shipOrderAction, type FormState } from "@/app/actions";
 import { CARRIERS } from "@/lib/types";
 import { SubmitButton } from "@/components/submit-button";
 import { Notice } from "@/components/ui";
+import { usePrintWindow } from "@/components/print-window";
 
 type Option = { value: string; label: string; group: string };
 
-export function ShipForm({ orderId, weightGrams, options, defaultValue }: { orderId: string; weightGrams: number; options: Option[]; defaultValue: string }) {
+export function ShipForm({ orderId, weightGrams, options, defaultValue, printOnPack }: { orderId: string; weightGrams: number; options: Option[]; defaultValue: string; printOnPack: boolean }) {
+  const printWin = usePrintWindow(printOnPack);
   const [mode, setMode] = useState<"label" | "manual">("label");
-  const [labelState, labelAction] = useActionState<FormState, FormData>(labelAndShip.bind(null, orderId), undefined);
+  const [labelState, labelAction] = useActionState<FormState, FormData>(async (prev, form) => {
+    const r = await labelAndShip(orderId, prev, form);
+    if (r?.success || r?.error?.startsWith("Etiqueta creada")) printWin.go(`/api/labels/${orderId}`);
+    else printWin.cancel();
+    return r;
+  }, undefined);
   const [manualState, manualAction] = useActionState<FormState, FormData>(shipOrderAction.bind(null, orderId), undefined);
   const lv = labelState?.values ?? {};
   const mv = manualState?.values ?? {};
@@ -33,7 +40,7 @@ export function ShipForm({ orderId, weightGrams, options, defaultValue }: { orde
       </div>
 
       {mode === "label" ? (
-        <form action={labelAction} className="space-y-4">
+        <form action={labelAction} onSubmit={printWin.open} className="space-y-4">
           <div>
             <label className="label" htmlFor="method">Envío</label>
             <select id="method" name="method" className="input" defaultValue={lv.method || defaultValue}>

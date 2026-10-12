@@ -64,6 +64,7 @@ export default async function EtiquetasPage({ searchParams }: { searchParams: Pr
               printRotate180: settings.rotate180,
               printAutoDialog: settings.autoDialog,
               printSort: settings.sort,
+              printOnPack: settings.printOnPack,
             }}
           />
         </Card>

@@ -353,7 +353,7 @@ export async function labelAndShip(orderId: string, _: FormState, form: FormData
   revalidatePath("/", "layout");
   const updated = await db.order.findUnique({ where: { id: orderId } });
   if (updated?.syncError) return { error: `Etiqueta creada, pero no se pudo avisar a la tienda: ${updated.syncError}` };
-  return { success: "Etiqueta creada y seguimiento enviado a la tienda. Está en «Etiquetas por imprimir»." };
+  return { success: "Etiqueta creada y seguimiento enviado a la tienda." };
 }
 
 /** Envío con etiqueta hecha fuera de Packia: solo se registra el seguimiento. */

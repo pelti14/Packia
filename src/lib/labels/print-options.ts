@@ -13,5 +13,6 @@ export type PrintSettingsValues = {
   printScale: number;
   printRotate180: boolean;
   printAutoDialog: boolean;
+  printOnPack: boolean;
   printSort: string;
 };

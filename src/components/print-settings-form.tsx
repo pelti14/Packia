@@ -50,6 +50,13 @@ export function PrintSettingsForm({ initial }: { initial: PrintSettingsValues })
           </select>
         </div>
       </div>
+      <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-brand-50/60 p-4 text-sm text-ink-700 ring-1 ring-brand-200">
+        <input type="checkbox" name="printOnPack" defaultChecked={checked("printOnPack")} className="mt-0.5 h-5 w-5 accent-brand-500" />
+        <span>
+          <b className="text-ink-900">Imprimir cada etiqueta al embalar (recomendado)</b>
+          <span className="block text-xs text-ink-500">Al pulsar «Etiqueta y enviar» sale la etiqueta de ESE pedido y se pega en su caja en el momento: imposible confundirlas. Si lo desactivas, se acumulan en «Por imprimir» para imprimirlas en bloque.</span>
+        </span>
+      </label>
       <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink-700">
         <label className="flex items-center gap-2"><input type="checkbox" name="printAutoDialog" defaultChecked={checked("printAutoDialog")} className="h-4 w-4 accent-brand-500" /> Abrir el diálogo de imprimir al instante</label>
         <label className="flex items-center gap-2"><input type="checkbox" name="printRotate180" defaultChecked={checked("printRotate180")} className="h-4 w-4 accent-brand-500" /> Girar 180° (salen al revés)</label>

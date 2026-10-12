@@ -12,6 +12,7 @@ import { ORDER_FLOW, STATUS_LABEL, type OrderStatus } from "@/lib/types";
 import { BackLink, Card, CardHeader, Notice, PlatformBadge, Pill, StatusBadge } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { ShipForm } from "./ship-form";
+import { getPrintSettings } from "@/lib/labels/print";
 import { PickList } from "@/components/pick-list";
 import { BlockersNotice } from "@/components/blockers-notice";
 import { orderBlockers } from "@/lib/validation";
@@ -154,7 +155,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
               {status === "SHIPPED" || !staff ? null : status === "PACKED" ? (
                 blockers.length ? null : <>
                   {shipping?.error && <Notice tone="error">Sendcloud no disponible: {shipping.error}</Notice>}
-                  <ShipForm orderId={order.id} weightGrams={await estimateWeight(order)} options={shipping!.options} defaultValue={shipping!.defaultValue} />
+                  <ShipForm orderId={order.id} weightGrams={await estimateWeight(order)} options={shipping!.options} defaultValue={shipping!.defaultValue} printOnPack={(await getPrintSettings()).printOnPack} />
                 </>
               ) : status !== "CANCELLED" ? (
                 blockers.length ? null : (

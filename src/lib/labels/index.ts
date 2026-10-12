@@ -101,6 +101,7 @@ export async function labelPdf(order: FullOrder): Promise<Uint8Array> {
       weightGrams: order.weightGrams ?? 500,
       units: order.items.reduce((s, i) => s + i.quantity, 0),
       address: parseAddress(order.shippingAddress),
+      contents: order.items.map((i) => `${i.quantity}× ${i.sku}`).join(" · "),
     });
   }
   throw new Error("Este pedido no tiene etiqueta interna generada");

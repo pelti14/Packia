@@ -30,6 +30,7 @@ export async function savePrintSettings(_: FormState, form: FormData): Promise<F
     printScale: Math.round(scale),
     printRotate180: form.get("printRotate180") === "on",
     printAutoDialog: form.get("printAutoDialog") === "on",
+    printOnPack: form.get("printOnPack") === "on",
     printSort: ["CLIENT", "CARRIER", "TIME"].includes(sort) ? sort : "CARRIER",
   };
   await db.appSettings.upsert({ where: { id: "default" }, create: { id: "default", ...data }, update: data });

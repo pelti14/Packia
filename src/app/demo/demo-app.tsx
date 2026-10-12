@@ -56,7 +56,7 @@ type Viewer = "equipo" | "cliente";
 
 /* ───────────── App ───────────── */
 
-export function DemoApp({ plans }: { plans: PlanOption[] }) {
+export function DemoApp({ plans, printOnPack }: { plans: PlanOption[]; printOnPack: boolean }) {
   const [s, setS] = useState<State>(initial);
   const [view, setView] = useState<View>("panel");
   const [viewer, setViewer] = useState<Viewer>("equipo");
@@ -214,17 +214,22 @@ export function DemoApp({ plans }: { plans: PlanOption[] }) {
               onPack={() => update((p) => ({ ...p, orders: p.orders.map((o) => (o.id === order.id ? { ...o, status: "PACKED" } : o)) }), `${order.number} embalado`)}
               onUnpack={() => update((p) => ({ ...p, orders: p.orders.map((o) => (o.id === order.id ? { ...o, status: "PENDING" } : o)) }), `${order.number} vuelve a pendiente`)}
               onShip={() => {
+                // Igual que en la app: con «imprimir al embalar», sale la etiqueta de este pedido al momento.
+                if (printOnPack) {
+                  const q = new URLSearchParams({ order: order.number, carrier: order.carrier, client: CLIENT, units: String(order.items.reduce((a, i) => a + i.quantity, 0)) });
+                  window.open(`/demo/etiqueta?${q}`, "_blank");
+                }
                 const tracking = `PK${Date.now().toString(36).toUpperCase().slice(-8)}`;
                 update(
                   (p) => ({
                     ...p,
-                    orders: p.orders.map((o) => (o.id === order.id ? { ...o, status: "SHIPPED", tracking, printed: false } : o)),
+                    orders: p.orders.map((o) => (o.id === order.id ? { ...o, status: "SHIPPED", tracking, printed: printOnPack } : o)),
                     products: p.products.map((pr) => {
                       const line = order.items.find((i) => i.sku === pr.sku);
                       return line ? { ...pr, stock: Math.max(0, pr.stock - line.quantity) } : pr;
                     }),
                   }),
-                  `${order.number} enviado con ${order.carrier} · etiqueta en «Etiquetas por imprimir»`,
+                  printOnPack ? `${order.number} enviado con ${order.carrier} · etiqueta impresa: pégala en su caja` : `${order.number} enviado con ${order.carrier} · etiqueta en «Etiquetas por imprimir»`,
                 );
                 const next = s.orders.find((o) => o.id !== order.id && ["PENDING", "PICKING"].includes(o.status));
                 if (next) setOrderId(next.id);

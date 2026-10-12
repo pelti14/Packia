@@ -321,6 +321,8 @@ model AppSettings {
   printScale         Int      @default(100)
   /// Girar 180° (impresoras que sacan la etiqueta al revés).
   printRotate180     Boolean  @default(false)
+  /// Imprimir cada etiqueta en el momento de embalar (va directa a su caja).
+  printOnPack        Boolean  @default(true)
   /// Abrir el diálogo de impresión al abrir el PDF.
   printAutoDialog    Boolean  @default(true)
   /// Orden de las etiquetas: CLIENT (cliente y pedido) | CARRIER (agencia) | TIME (hora de envío)

@@ -29,6 +29,7 @@ export async function GET(req: Request) {
         trackingNumber: internalTrackingNumber(),
         weightGrams: Math.min(Number(q.get("weight")) || 640, 30000),
         units: Math.min(Number(q.get("units")) || 2, 999),
+        contents: "1× LUM-CRE-50 · 2× LUM-LIM-200",
         address: { name: `${NAMES[i % NAMES.length]} (DEMO)`, address1: "Calle Mayor 12, 3ºB", city, zip, country: "ES", phone: "600000000" },
       });
     }),

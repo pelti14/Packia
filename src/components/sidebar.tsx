@@ -46,7 +46,7 @@ function NavLink({ item, active, badge, onNavigate }: { item: Item; active: bool
       href={item.href}
       onClick={onNavigate}
       className={clsx(
-        "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
+        "group relative flex shrink-0 items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition [@media(min-height:860px)]:py-2.5",
         active
           ? "bg-ink-900 text-white shadow-[0_8px_20px_-10px_rgb(11_11_13/0.6)]"
           : "text-ink-500 hover:bg-white/80 hover:text-ink-900",
@@ -75,10 +75,10 @@ export function Sidebar({ role, user }: { role: Role; user: { name: string; deta
   const { badges } = useNotifications().state;
   const business = BUSINESS.filter((i) => i.roles.includes(role));
   return (
-    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-white/70 bg-white/55 px-4 py-6 backdrop-blur-xl print:hidden lg:flex">
-      <div className="px-2"><Logo /></div>
+    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-white/70 bg-white/55 px-4 py-5 backdrop-blur-xl print:hidden lg:flex">
+      <div className="shrink-0 px-2"><Logo /></div>
 
-      <nav className="mt-9 flex flex-col gap-1">
+      <nav className="-mx-2 mt-6 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain px-2 pb-2 [scrollbar-width:thin]">
         <div className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-400">Operación</div>
         {OPERATIONS.filter((i) => i.roles.includes(role)).map((item) => (
           <NavLink key={item.href} item={item} active={isActive(pathname, item.href)} badge={item.badge && badges[item.badge]} />
@@ -89,8 +89,8 @@ export function Sidebar({ role, user }: { role: Role; user: { name: string; deta
         ))}
       </nav>
 
-      <div className="mt-auto mb-2 px-3 text-[10px] font-medium text-ink-400"><BrandName /> v{process.env.NEXT_PUBLIC_APP_VERSION}</div>
-      <div className="rounded-2xl border border-line bg-white/80 p-3">
+      <div className="mb-2 mt-3 shrink-0 px-3 text-[10px] font-medium text-ink-400"><BrandName /> v{process.env.NEXT_PUBLIC_APP_VERSION}</div>
+      <div className="shrink-0 rounded-2xl border border-line bg-white/80 p-3">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-ink-900 text-sm font-bold text-brand-400">
             {user.name.charAt(0).toUpperCase()}

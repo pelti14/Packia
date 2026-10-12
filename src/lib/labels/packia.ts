@@ -25,6 +25,8 @@ export type LabelData = {
   weightGrams: number;
   units: number;
   address: Address;
+  /** Contenido del paquete («2× CREMA-50 · 1× GEL-200»), para casar etiqueta y caja. */
+  contents?: string;
 };
 
 /** Etiqueta 10×15 cm (impresora térmica) con remitente, destinatario y código de barras. */
@@ -40,13 +42,21 @@ export async function renderInternalLabel(data: LabelData): Promise<Uint8Array> 
   const text = (s: string, x: number, y: number, size: number, f = font) => page.drawText(safe(s), { x, y, size, font: f, color: ink });
   const rule = (y: number) => page.drawLine({ start: { x: m, y }, end: { x: W - m, y }, thickness: 1, color: ink });
 
-  // Cabecera: agencia y peso
-  let y = H - m - 14;
+  // Cabecera: agencia y, bien grande, el número de pedido (para casar etiqueta y caja)
+  let y = H - m - 16;
   text(data.carrier.toUpperCase(), m, y, 18, bold);
-  const kg = `${(data.weightGrams / 1000).toFixed(2)} kg`;
-  text(kg, W - m - bold.widthOfTextAtSize(kg, 14), y + 2, 14, bold);
+  const num = safe(data.orderNumber);
+  const numSize = Math.min(20, (W / 2 - m) / Math.max(1, bold.widthOfTextAtSize(num, 1)));
+  text(num, W - m - bold.widthOfTextAtSize(num, numSize), y, numSize, bold);
   y -= 12;
-  text(`Pedido ${data.orderNumber} · ${data.clientName} · ${data.units} uds.`, m, y, 8);
+  text(`${data.clientName} · ${data.units} uds. · ${(data.weightGrams / 1000).toFixed(2)} kg`, m, y, 8);
+  if (data.contents) {
+    y -= 10;
+    let c = safe(`Contenido: ${data.contents}`);
+    while (c.length > 10 && font.widthOfTextAtSize(c, 7) > W - 2 * m) c = c.slice(0, -2);
+    if (c.length < safe(`Contenido: ${data.contents}`).length) c = c.slice(0, -1) + "…";
+    text(c, m, y, 7);
+  }
   y -= 6;
   rule(y);
 

@@ -19,12 +19,13 @@ export type PrintSettings = {
   scale: number;
   rotate180: boolean;
   autoDialog: boolean;
+  printOnPack: boolean;
   sort: "CLIENT" | "CARRIER" | "TIME";
 };
 
 export async function getPrintSettings(): Promise<PrintSettings> {
   const s = await db.appSettings
-    .findUnique({ where: { id: "default" }, select: { printFormat: true, printOffsetX: true, printOffsetY: true, printScale: true, printRotate180: true, printAutoDialog: true, printSort: true } })
+    .findUnique({ where: { id: "default" }, select: { printFormat: true, printOffsetX: true, printOffsetY: true, printScale: true, printRotate180: true, printAutoDialog: true, printSort: true, printOnPack: true } })
     .catch(() => null);
   return {
     format: (s?.printFormat && s.printFormat in PRINT_FORMATS ? s.printFormat : "THERMAL_100x150") as PrintFormat,
@@ -33,6 +34,7 @@ export async function getPrintSettings(): Promise<PrintSettings> {
     scale: s?.printScale ?? 100,
     rotate180: s?.printRotate180 ?? false,
     autoDialog: s?.printAutoDialog ?? true,
+    printOnPack: s?.printOnPack ?? true,
     sort: (s?.printSort ?? "CARRIER") as PrintSettings["sort"],
   };
 }
