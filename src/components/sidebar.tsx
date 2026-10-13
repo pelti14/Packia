@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
-import { BadgePercent, Boxes, Contact, Presentation, Printer, LayoutDashboard, LogOut, PackagePlus, Plug, Receipt, RotateCcw, Settings, ShieldCheck, Truck, Users, type LucideIcon } from "lucide-react";
+import { BadgePercent, Boxes, Contact, Palette, Presentation, Printer, Rocket, Route, LayoutDashboard, LogOut, PackagePlus, Plug, Receipt, RotateCcw, Settings, ShieldCheck, Truck, Users, type LucideIcon } from "lucide-react";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { useNotifications } from "@/components/notifications";
@@ -30,8 +30,11 @@ const OPERATIONS: Item[] = [
 const BUSINESS: Item[] = [
   { href: "/facturacion", label: "Facturación", icon: Receipt, roles: ["ADMIN", "CLIENT"] },
   { href: "/mi-plan", label: "Mi plan", icon: BadgePercent, roles: ["CLIENT"] },
+  { href: "/mi-marca", label: "Mi marca", icon: Palette, roles: ["CLIENT"] },
+  { href: "/bienvenida", label: "Primeros pasos", icon: Rocket, roles: ["CLIENT"] },
   { href: "/clientes", label: "Clientes", icon: Users, roles: ["ADMIN", "STAFF"] },
   { href: "/tiendas", label: "Tiendas", icon: Plug, roles: ["ADMIN", "STAFF"], badge: "tiendas" },
+  { href: "/transporte", label: "Transporte", icon: Route, roles: ["ADMIN"] },
   { href: "/usuarios", label: "Usuarios", icon: ShieldCheck, roles: ["ADMIN"] },
   { href: "/ajustes", label: "Ajustes", icon: Settings, roles: ["ADMIN"] },
   { href: "/demo", label: "Modo demo", icon: Presentation, roles: ["ADMIN", "STAFF"] },

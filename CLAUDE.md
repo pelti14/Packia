@@ -1,6 +1,6 @@
 # Kargia (antes «Packia»): traspaso del proyecto para Claude
 
-Lee esto entero antes de tocar nada. Resume todo lo hablado y construido con el dueño del proyecto hasta la **v13.0.0** (octubre de 2026).
+Lee esto entero antes de tocar nada. Resume todo lo hablado y construido con el dueño del proyecto hasta la **v14.0.0** (octubre de 2026).
 
 ---
 
@@ -52,7 +52,7 @@ Lee esto entero antes de tocar nada. Resume todo lo hablado y construido con el 
 - **Hosting:** Hostinger, «Node.js Web App» (plan Business o Cloud).
   - El usuario sube el zip, pulsa **Redeploy** y configura las variables de entorno en hPanel.
   - URL temporal actual: `https://floralwhite-dugong-101545.hostingersite.com`. El plan es moverla a `app.kargia.eu`.
-- **Variables de entorno** (explicadas en `docs/variables-de-entorno.md`): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL` (pooler, puerto 6543, `?pgbouncer=true`), `DIRECT_URL` (puerto 5432), `ENCRYPTION_KEY` y `NEXT_PUBLIC_APP_URL` (opcional). Opcionales: `CRON_SECRET`, `SENDCLOUD_*`, `COMPANY_*`, `SENDER_*`, `SYNC_INTERVAL_SECONDS`.
+- **Variables de entorno** (explicadas en `docs/variables-de-entorno.md`): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL` (pooler, puerto 6543, `?pgbouncer=true`), `DIRECT_URL` (puerto 5432), `ENCRYPTION_KEY` y `NEXT_PUBLIC_APP_URL` (opcional). Opcionales: `CRON_SECRET`, `SENDCLOUD_*`, `COMPANY_*`, `SENDER_*`, `SYNC_INTERVAL_SECONDS`, `SHOPIFY_API_KEY`/`SHOPIFY_API_SECRET` (Shopify en un clic) y `SMTP_HOST`/`PORT`/`USER`/`PASS`/`FROM` (emails al comprador).
 - **Asistente `/setup`:** comprueba las variables, crea las tablas (aplica las migraciones él mismo y registra los checksums en `_prisma_migrations`, compatible con `prisma migrate deploy`) y crea el primer administrador.
 - **Pantalla «Actualización pendiente»:** si una versión nueva trae migraciones sin aplicar, el layout `(app)` la muestra y el administrador pulsa «Actualizar ahora».
   - **Regla crítica:** cualquier consulta que se ejecute antes de esa comprobación (por ejemplo `getCurrentUser` en `src/lib/auth.ts`) solo puede seleccionar **columnas que existían en la primera versión**. Si no, la app se cae tras actualizar; ya pasó una vez y se corrigió en la v4.1.
@@ -71,7 +71,7 @@ Lee esto entero antes de tocar nada. Resume todo lo hablado y construido con el 
 
 ---
 
-## 4. Funcionalidades (v12.1.0)
+## 4. Funcionalidades (v12.1.0; lo nuevo de v13 y v14, en las secciones 5b y 6b)
 
 **Roles**
 - **ADMIN:** acceso a todo.
@@ -148,6 +148,31 @@ Lee esto entero antes de tocar nada. Resume todo lo hablado y construido con el 
 
 ---
 
+## 5b. v14: transporte, alta en un clic y seguimiento con marca
+
+Guía para el usuario: `docs/v14-transporte-alta-seguimiento.md`.
+
+- **B1 · Transporte multi-agencia**
+  - `src/lib/shipping.ts`: zonas por código postal (ES, BAL, CAN, CYM, PT, EU, INT), tramos de peso, `quote`, `recommend` (DEFAULT/CHEAPEST/FASTEST), `markupFor` y `adviceFor`.
+  - Tabla `CarrierService` con `rates` en JSON (céntimos por zona y tramo) y `labelMethod` (`packia:X` o `sendcloud:ID`).
+  - Página `/transporte` (ADMIN) y acciones en `src/app/carrier-actions.ts`.
+  - El pedido guarda `carrierServiceId`, `shippingCostCents` y `shippingChargeCents` al enviarse (`labelAndShip` → `shipOrder`).
+  - `usageForRange` añade una línea de transporte por agencia a la factura.
+  - En el cliente: `shippingStrategy` y `shippingMarkupCents` (null = margen general de `AppSettings.shippingMarkupCents`).
+- **A1 · Alta autoservicio**
+  - `src/lib/onboarding.ts`: invitaciones (`Invite`), `OAuthState` de un solo uso (30 min), Shopify OAuth (`SHOPIFY_API_KEY`/`SECRET`, HMAC de la vuelta) y WooCommerce wc-auth (las claves llegan por POST a `/api/woocommerce/callback`).
+  - Rutas: `/alta` (pública, límite por IP, exige invitación o `openSignup`), `/bienvenida` (Primeros pasos del CLIENT), `/api/shopify/install|callback` y `/api/woocommerce/connect|callback`.
+  - Las invitaciones se gestionan en `/clientes` (`src/app/invite-actions.ts`).
+- **A2 · Seguimiento con marca**
+  - `src/lib/tracking.ts`: `trackingToken` del pedido, página pública `/seguimiento/[token]` (+ `/logo`) y `notifyBuyer` (emails con `MessageLog` único por pedido y evento; dedupe con P2002).
+  - `src/lib/mailer.ts`: nodemailer con `SMTP_*`; si no hay SMTP, «SKIPPED».
+  - Ganchos: RECEIVED en `upsertOrders` (solo pedidos de menos de 24 h), PACKED en `packOrder`, `advanceOrders` y `setOrderStatus`, SHIPPED en `shipOrder`, y DELIVERED con el webhook `/api/webhooks/sendcloud` (firma HMAC hex) o con `markDelivered`.
+  - Si el cliente tiene `trackingEnabled`, la tienda recibe nuestra URL de seguimiento. Si además `notifyBuyer = KARGIA`, la tienda no notifica (`notifyCustomer: false`).
+  - `/mi-marca` (CLIENT, o ADMIN con `?c=ID`).
+- Pruebas: `tests/v14.test.ts`. Hay una e2e en el scratchpad que recorre invitación → alta → Woo → marca → envío → seguimiento.
+
+---
+
 ## 6. Mapa del código
 
 ```
@@ -209,6 +234,7 @@ docs/                   cliente-ideal, estrategia-0-a-10k, puesta-en-marcha, var
 | 10 | Colores de Kargia en toda la app y contacto público. |
 | 11 / 11.1 | Facturas rectificativas (anular y corregir) y cola de etiquetas en la demo. |
 | 12 / 12.1 | Menú con scroll, imprimir cada etiqueta al embalar con recuadro, número de pedido grande y contenido en la etiqueta. |
+| 14 | Transporte multi-agencia con tarifas y elección automática, alta autoservicio con conexión de Shopify y WooCommerce en un clic, y seguimiento y emails con la marca de cada tienda. |
 | 13 | Auditoría de seguridad: cabeceras, `?next=` seguro, límite de intentos de login, cookies endurecidas, pruebas automáticas, stock nunca negativo y plazo de salida desde la llegada al almacén. |
 
 ---
@@ -216,7 +242,8 @@ docs/                   cliente-ideal, estrategia-0-a-10k, puesta-en-marcha, var
 ## 9. Ideas pendientes y posibles siguientes pasos
 
 - Impresión 100 % silenciosa desde el servidor con **PrintNode** o **QZ Tray**, si el modo `--kiosk-printing` no le basta.
-- Repartidores nativos (GLS, SEUR…) sin pasar por Sendcloud: se habló pero no está hecho.
+- Repartidores nativos (GLS, SEUR…) sin pasar por Sendcloud: las tarifas y la elección ya están (v14); falta la API de cada agencia para la etiqueta oficial.
+- Resto del roadmap del brief de auditoría: A3/A4, B2–B4 y C1–C4.
 - Pasar la app a `app.kargia.eu`: variable `NEXT_PUBLIC_APP_URL`, Site URL y Redirect URL en Supabase, y URL en los HTML de GHL.
 - Datos fiscales reales en Ajustes: ahora hay datos de ejemplo («Packia Fulfillment S.L.»).
 - Testimonios y casos reales en la web cuando haya clientes.

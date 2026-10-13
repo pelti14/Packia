@@ -8,10 +8,12 @@ import { CARRIERS } from "@/lib/types";
 import { SubmitButton } from "@/components/submit-button";
 import { Notice } from "@/components/ui";
 import { printLabel } from "@/components/print-toast";
+import { ShippingAdviceBox } from "@/components/shipping-advice";
+import type { ShippingAdvice } from "@/lib/shipping";
 
 type Option = { value: string; label: string; group: string };
 
-export function ShipForm({ orderId, weightGrams, options, defaultValue, printOnPack }: { orderId: string; weightGrams: number; options: Option[]; defaultValue: string; printOnPack: boolean }) {
+export function ShipForm({ orderId, weightGrams, options, defaultValue, printOnPack, advice }: { orderId: string; weightGrams: number; options: Option[]; defaultValue: string; printOnPack: boolean; advice: ShippingAdvice | null }) {
   const [mode, setMode] = useState<"label" | "manual">("label");
   const [labelState, labelAction] = useActionState<FormState, FormData>(async (prev, form) => {
     const r = await labelAndShip(orderId, prev, form);
@@ -41,6 +43,7 @@ export function ShipForm({ orderId, weightGrams, options, defaultValue, printOnP
         <form action={labelAction} className="space-y-4">
           <div>
             <label className="label" htmlFor="method">Envío</label>
+            {advice && <div className="mb-2"><ShippingAdviceBox advice={advice} /></div>}
             <select id="method" name="method" className="input" defaultValue={lv.method || defaultValue}>
               {[...new Set(options.map((o) => o.group))].map((g) => (
                 <optgroup key={g} label={g}>

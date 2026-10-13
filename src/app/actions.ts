@@ -1,6 +1,7 @@
 "use server";
 
 import crypto from "node:crypto";
+import { notifyBuyerLater } from "@/lib/tracking";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
@@ -16,6 +17,8 @@ import { changeTerms, clientTerms, getPlans, nextMonthStart, sameTerms } from "@
 import { startOfDay, startOfMonth } from "@/lib/schedule";
 import { formatDateOnly } from "@/lib/format";
 import { safeRedirectPath } from "@/lib/security";
+import { markupFor, quote, zoneFor } from "@/lib/shipping";
+import { parseAddress } from "@/lib/format";
 
 export type FormState = { error?: string; success?: string; values?: Record<string, string> } | undefined;
 
@@ -125,7 +128,15 @@ export async function updateClientShipping(clientId: string, _: FormState, form:
   await assertRole(["ADMIN"]);
   const defaultShipping = str(form.get("defaultShipping"));
   if (defaultShipping && !/^(packia:[\w ]+|sendcloud:\d+)$/.test(defaultShipping)) return { error: "Envío por defecto no válido" };
-  const data: { defaultShipping: string | null; sendcloudPublicKey?: string | null; sendcloudSecretKey?: string | null } = { defaultShipping: defaultShipping || null };
+  const strategy = str(form.get("shippingStrategy"));
+  const markupRaw = str(form.get("shippingMarkup"));
+  const markupCents = markupRaw ? cents(markupRaw) : null;
+  if (markupRaw && (markupCents === null || markupCents > 5000)) return { error: "Margen por envío no válido" };
+  const data: { defaultShipping: string | null; shippingStrategy: string; shippingMarkupCents: number | null; sendcloudPublicKey?: string | null; sendcloudSecretKey?: string | null } = {
+    defaultShipping: defaultShipping || null,
+    shippingStrategy: ["DEFAULT", "CHEAPEST", "FASTEST"].includes(strategy) ? strategy : "DEFAULT",
+    shippingMarkupCents: markupCents,
+  };
   if (form.get("clearSendcloud")) {
     data.sendcloudPublicKey = null;
     data.sendcloudSecretKey = null;
@@ -285,6 +296,7 @@ export async function advanceOrder(orderId: string) {
   // El paso a "Enviado" exige etiqueta o seguimiento.
   if (i < 0 || !next || next === "SHIPPED") return;
   await db.order.update({ where: { id: orderId }, data: { status: next } });
+  if (next === "PACKED") notifyBuyerLater(orderId, "PACKED");
   revalidatePath("/", "layout");
 }
 
@@ -297,6 +309,7 @@ export async function advanceOrders(form: FormData) {
     // A "Embalado" solo pasan los pedidos con todos sus productos validados.
     if (o.status === "PICKING" && (await orderBlockers(o)).length) continue;
     await db.order.update({ where: { id: o.id }, data: { status: o.status === "PENDING" ? "PICKING" : "PACKED" } });
+    if (o.status === "PICKING") notifyBuyerLater(o.id, "PACKED");
   }
   revalidatePath("/", "layout");
 }
@@ -307,9 +320,18 @@ export async function packOrder(orderId: string): Promise<FormState> {
   const order = await db.order.findUniqueOrThrow({ where: { id: orderId }, select: { clientId: true, items: { select: { sku: true, name: true, quantity: true } } } });
   const blockers = await orderBlockers(order);
   if (blockers.length) return { error: blockerMessage(blockers) };
-  await db.order.updateMany({ where: { id: orderId, status: { in: ["PENDING", "PICKING"] } }, data: { status: "PACKED" } });
+  const r = await db.order.updateMany({ where: { id: orderId, status: { in: ["PENDING", "PICKING"] } }, data: { status: "PACKED" } });
+  if (r.count) notifyBuyerLater(orderId, "PACKED");
   revalidatePath("/", "layout");
   return { success: "Embalado" };
+}
+
+/** Marca un pedido enviado como entregado (las etiquetas internas no avisan solas) y avisa al comprador. */
+export async function markDelivered(orderId: string) {
+  await assertRole(["ADMIN", "STAFF"]);
+  const r = await db.order.updateMany({ where: { id: orderId, status: "SHIPPED", deliveredAt: null }, data: { deliveredAt: new Date(), carrierStatus: "Entregado" } });
+  if (r.count) notifyBuyerLater(orderId, "DELIVERED");
+  revalidatePath(`/salida/${orderId}`);
 }
 
 /** Deshace la preparación: vuelve a Pendiente (por si nos hemos confundido). No aplica a pedidos ya enviados. */
@@ -345,8 +367,21 @@ export async function labelAndShip(orderId: string, _: FormState, form: FormData
   else if (kind === "packia" && (CARRIERS as readonly string[]).includes(ref)) req = { provider: "PACKIA", carrier: ref, weightGrams };
   else return { error: "Elige cómo enviar", values };
 
+  // Coste y precio del envío según la tarifa del servicio elegido (Transporte).
+  const zone = zoneFor(parseAddress(order.shippingAddress));
+  const markup = await markupFor(order.client);
+  const priced = (await db.carrierService.findMany({ where: { active: true, labelMethod: values.method } }))
+    .map((s) => ({ s, cost: quote(s, zone, weightGrams) }))
+    .filter((x): x is { s: (typeof x)["s"]; cost: number } => x.cost !== null)
+    .sort((a, b) => a.cost - b.cost)[0];
+
   try {
-    const shipment = await createLabel(order, req);
+    const shipment = {
+      ...(await createLabel(order, req)),
+      carrierServiceId: priced?.s.id ?? null,
+      shippingCostCents: priced?.cost ?? null,
+      shippingChargeCents: priced ? priced.cost + markup : null,
+    };
     await shipOrder(order.id, shipment);
   } catch (err) {
     return { error: `No se pudo crear la etiqueta: ${message(err)}`, values };

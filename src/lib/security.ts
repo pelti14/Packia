@@ -52,8 +52,8 @@ export function securityHeaders(opts: { supabaseUrl?: string } = {}) {
 }
 
 /** Opciones forzadas para las cookies de sesión. */
-export function hardenCookie<T extends Record<string, unknown>>(options: T | undefined, production = process.env.NODE_ENV === "production") {
-  return { ...(options ?? {}), httpOnly: true, secure: production, sameSite: "lax" as const, path: "/" };
+export function hardenCookie<T extends object>(options: T | undefined, production = process.env.NODE_ENV === "production") {
+  return { ...(options ?? ({} as T)), httpOnly: true, secure: production, sameSite: "lax" as const, path: "/" };
 }
 
 /**

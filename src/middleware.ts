@@ -3,7 +3,7 @@ import { hardenCookie } from "@/lib/security";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
 /** Rutas accesibles sin sesión. */
-const PUBLIC = ["/login", "/auth", "/setup", "/api/webhooks", "/api/cron", "/api/public"];
+const PUBLIC = ["/login", "/auth", "/setup", "/api/webhooks", "/api/cron", "/api/public", "/alta", "/seguimiento", "/api/shopify/callback", "/api/woocommerce/callback"];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });

@@ -48,6 +48,23 @@ model Client {
   trialWeeks         Int       @default(0)
   /// Último día de servicio (baja confirmada). Después no se factura nada.
   serviceEndAt       DateTime?
+  /// Elección de agencia: DEFAULT (la de por defecto) | CHEAPEST (más barata) | FASTEST (más rápida)
+  shippingStrategy   String    @default("DEFAULT")
+  /// Margen por envío sobre el coste de la agencia (céntimos). Vacío = el general de Ajustes.
+  shippingMarkupCents Int?
+  /// Experiencia del comprador: página de seguimiento y avisos con la marca de la tienda.
+  trackingEnabled    Boolean   @default(false)
+  /// Quién avisa al comprador: STORE (Shopify/Woo, como siempre) | KARGIA (emails con la marca de la tienda)
+  notifyBuyer        String    @default("STORE")
+  /// Avisos activados: RECEIVED,PACKED,SHIPPED,DELIVERED
+  buyerEvents        String    @default("RECEIVED,PACKED,SHIPPED,DELIVERED")
+  /// Marca de la tienda para el comprador final.
+  publicName         String?
+  /// Logo como data URL (máx. 300 KB).
+  publicLogo         String?
+  publicColor        String?
+  publicReplyTo      String?
+  publicMessage      String?
   /// Envío por defecto: "packia:GLS" (etiqueta interna) o "sendcloud:1402" (método de Sendcloud).
   defaultShipping    String?
   /// Cuenta de Sendcloud propia del cliente, con sus contratos de agencia (cifrado). Si está vacío se usa la de Packia.
@@ -66,6 +83,7 @@ model Client {
   notifications      Notification[]
   planChanges        PlanChange[]
   planRequests       PlanRequest[]
+  invites            Invite[]
 }
 
 /// Tienda online conectada (Shopify o WooCommerce). Las credenciales se guardan cifradas.
@@ -159,6 +177,16 @@ model Order {
   /// Cuándo se imprimió la etiqueta por última vez (null = en «Etiquetas por imprimir»).
   labelPrintedAt  DateTime?
   labelPrintCount Int         @default(0)
+  /// Servicio de transporte elegido y lo que cuesta (agencia) y se cobra (cliente), en céntimos.
+  carrierServiceId    String?
+  carrierService      CarrierService? @relation(fields: [carrierServiceId], references: [id], onDelete: SetNull)
+  shippingCostCents   Int?
+  shippingChargeCents Int?
+  /// Enlace público de seguimiento para el comprador (/seguimiento/<token>).
+  trackingToken   String?     @unique
+  /// Último estado informado por la agencia y fecha de entrega.
+  carrierStatus   String?
+  deliveredAt     DateTime?
   /// Error al devolver el seguimiento a la tienda, si lo hubo.
   syncError       String?
   placedAt        DateTime
@@ -166,6 +194,7 @@ model Order {
   createdAt       DateTime    @default(now())
   items           OrderItem[]
   returns         Return[]
+  messages        MessageLog[]
 
   @@unique([storeId, externalId])
   @@index([status])
@@ -310,6 +339,12 @@ model AppSettings {
   sendcloudSecretKey String?
   /// Emitir solo las facturas del mes anterior los días 1-5 de cada mes.
   autoInvoice        Boolean  @default(true)
+  /// Margen por envío por defecto sobre el coste de la agencia (céntimos).
+  shippingMarkupCents Int     @default(40)
+  /// Permitir que cualquier tienda se dé de alta sola desde /alta (sin invitación).
+  openSignup         Boolean  @default(false)
+  /// Semanas de prueba para las altas por invitación o autoservicio.
+  defaultTrialWeeks  Int      @default(2)
   /// Serie de facturación: KG → KG-2026-0001 y rectificativas KGR-2026-0001.
   invoicePrefix      String   @default("KG")
   /// Impresora de etiquetas: THERMAL_100x150 | THERMAL_4x6 | A4_4 | A4_1
@@ -451,4 +486,71 @@ model PlanRequest {
   resolvedBy  String?
 
   @@index([status, effectiveAt])
+}
+
+/// Servicio de transporte con su tarifa de coste por zona y peso (para elegir la agencia automáticamente).
+model CarrierService {
+  id             String   @id @default(cuid())
+  /// «GLS Business 24h»
+  name           String
+  /// GLS, SEUR, Correos Express…
+  carrier        String
+  /// Cómo se crea la etiqueta: "packia:GLS" (interna) o "sendcloud:1402" (método de Sendcloud)
+  labelMethod    String
+  /// Días laborables de tránsito (para «la más rápida»).
+  transitDays    Int      @default(1)
+  maxWeightGrams Int      @default(30000)
+  /// Coste en céntimos por zona y tramo de peso: { "ES": { "1000": 390, "2000": 420 }, "BAL": {…} }
+  rates          Json
+  active         Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  orders         Order[]
+}
+
+/// Invitación para que una tienda se dé de alta sola.
+model Invite {
+  id          String    @id @default(cuid())
+  token       String    @unique
+  email       String?
+  companyName String?
+  plan        String?
+  trialWeeks  Int?
+  createdBy   String?
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime
+  usedAt      DateTime?
+  clientId    String?
+  client      Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+}
+
+/// Estado temporal de una conexión en un clic (Shopify OAuth / WooCommerce wc-auth).
+model OAuthState {
+  /// Valor aleatorio que viaja a la tienda y vuelve (anti-CSRF).
+  id        String    @id
+  /// SHOPIFY | WOOCOMMERCE
+  kind      String
+  clientId  String
+  domain    String
+  createdAt DateTime  @default(now())
+  usedAt    DateTime?
+}
+
+/// Avisos enviados al comprador final (evita duplicados y deja historial).
+model MessageLog {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  /// RECEIVED | PACKED | SHIPPED | DELIVERED | TEST
+  event     String
+  /// EMAIL
+  channel   String   @default("EMAIL")
+  to        String
+  /// SENT | FAILED | SKIPPED
+  status    String
+  error     String?
+  createdAt DateTime @default(now())
+
+  @@unique([orderId, event, channel])
 }

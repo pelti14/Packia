@@ -4,6 +4,7 @@ import { CheckCircle2, Printer } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { estimateWeight, shippingOptionsFor } from "@/lib/labels";
+import { adviceFor } from "@/lib/shipping";
 import { parseAddress } from "@/lib/format";
 import { urgency, slaStart } from "@/lib/schedule";
 import { BackLink, Card, Notice, PageHeader } from "@/components/ui";
@@ -87,6 +88,8 @@ export default async function PrepararPage({ searchParams }: { searchParams: Pro
   const bySku = new Map(products.map((p) => [p.sku, p]));
   const a = parseAddress(current.shippingAddress);
   const shipping = await shippingOptionsFor(current.client);
+  const weight = await estimateWeight(current);
+  const advice = await adviceFor(current.client, parseAddress(current.shippingAddress), weight, shipping.options);
   const packedCount = queue.filter((x) => x.status === "PACKED").length;
   const blockers = await orderBlockers(current);
 
@@ -119,8 +122,9 @@ export default async function PrepararPage({ searchParams }: { searchParams: Pro
           .sort((x, y) => (bySku.get(x.sku)?.location ?? "ZZ").localeCompare(bySku.get(y.sku)?.location ?? "ZZ"))
           .map((i) => ({ id: i.id, sku: i.sku, name: i.name, quantity: i.quantity, location: bySku.get(i.sku)?.location ?? null, stock: bySku.get(i.sku)?.stock ?? null, barcode: bySku.get(i.sku)?.barcode ?? null }))}
         options={shipping.options}
-        defaultValue={shipping.defaultValue}
-        weight={await estimateWeight(current)}
+        defaultValue={advice?.method ?? shipping.defaultValue}
+        weight={weight}
+        advice={advice}
         blocked={blockers.length > 0}
         printOnPack={printSettings.printOnPack}
         nextHref={next ? `${base}&o=${next.id}` : `${base}&o=fin`}

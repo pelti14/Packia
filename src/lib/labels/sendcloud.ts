@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import type { Address } from "@/lib/types";
 import { getSettings } from "@/lib/settings";
 import { countryCode } from "./sender";
@@ -92,4 +93,12 @@ export async function fetchLabelPdf(parcelId: string, keys?: Keys): Promise<Uint
   const res = await fetch(`${BASE}/labels/label_printer/${parcelId}`, { headers: await auth(keys), cache: "no-store" });
   if (!res.ok) throw new Error(`Sendcloud respondió ${res.status} al descargar la etiqueta`);
   return new Uint8Array(await res.arrayBuffer());
+}
+
+/** Firma de los webhooks de Sendcloud: HMAC-SHA256 (hex) del cuerpo con la clave secreta. */
+export function verifyWebhook(raw: string, signature: string | null, secret: string) {
+  if (!signature || !secret) return false;
+  const a = Buffer.from(crypto.createHmac("sha256", secret).update(raw, "utf8").digest("hex"));
+  const b = Buffer.from(signature);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }

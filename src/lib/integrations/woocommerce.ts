@@ -118,7 +118,7 @@ export async function fulfillOrder(creds: WooCreds, externalOrderId: string, shi
     method: "POST",
     body: {
       note: `Tu pedido ha salido con ${shipment.carrier}. Número de seguimiento: ${shipment.trackingNumber}.${link}`,
-      customer_note: true,
+      customer_note: shipment.notifyCustomer ?? true,
     },
   });
 }
@@ -130,4 +130,16 @@ export function verifyWebhook(rawBody: string, signature: string | null, secret:
   const a = Buffer.from(digest);
   const b = Buffer.from(signature);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+/** Crea en la tienda los webhooks de pedidos (si no existen ya para esta dirección). */
+export async function registerWebhooks(creds: WooCreds, deliveryUrl: string, secret: string) {
+  const existing = await wc<{ topic: string; delivery_url: string }[]>(creds, "/webhooks?per_page=100");
+  const created: string[] = [];
+  for (const topic of ["order.created", "order.updated"]) {
+    if (existing.some((w) => w.topic === topic && w.delivery_url === deliveryUrl)) continue;
+    await wc(creds, "/webhooks", { method: "POST", body: { name: `Kargia ${topic}`, topic, delivery_url: deliveryUrl, secret, status: "active" } });
+    created.push(topic);
+  }
+  return created;
 }

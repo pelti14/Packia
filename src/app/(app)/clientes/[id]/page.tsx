@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
@@ -25,7 +26,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
   return (
     <>
       <BackLink href="/clientes">Clientes</BackLink>
-      <PageHeader eyebrow="Cliente" title={c.name} description="Estos importes se usan para calcular su factura mensual." />
+      <PageHeader eyebrow="Cliente" title={c.name} description="Estos importes se usan para calcular su factura mensual." actions={<Link href={`/mi-marca?c=${c.id}`} className="btn-ghost">Marca para sus compradores</Link>} />
       {ok && <div className="mb-4"><Notice tone="success">{ok}</Notice></div>}
       {error && <div className="mb-4"><Notice tone="error">{error}</Notice></div>}
       {billableFrom(c) > new Date() && (
@@ -56,6 +57,8 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
           options={shipping.options}
           current={c.defaultShipping}
           ownSendcloud={Boolean(c.sendcloudPublicKey && c.sendcloudSecretKey)}
+          strategy={c.shippingStrategy}
+          markup={c.shippingMarkupCents === null ? "" : euros(c.shippingMarkupCents)}
           error={shipping.error}
         />
       </div>

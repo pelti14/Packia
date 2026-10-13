@@ -6,6 +6,7 @@ import { ensureCustomersBackfilled, recordCustomer } from "@/lib/customers";
 import { pendingMigrations } from "@/lib/setup";
 import * as shopify from "@/lib/integrations/shopify";
 import * as woo from "@/lib/integrations/woocommerce";
+import { notifyBuyerLater, trackingPageUrl } from "@/lib/tracking";
 import type { ExternalOrder, ExternalProduct, Shipment } from "@/lib/types";
 
 type StoreCreds = Pick<Store, "platform" | "domain" | "accessToken" | "consumerKey" | "consumerSecret"> &
@@ -94,6 +95,8 @@ export async function upsertOrders(store: Store, orders: ExternalOrder[]): Promi
       },
     });
     createdIds.push({ id: order.id, number: order.number });
+    // Aviso «pedido recibido» al comprador solo para pedidos recientes (no al importar el histórico).
+    if (Date.now() - o.placedAt.getTime() < 24 * 3_600_000) notifyBuyerLater(order.id, "RECEIVED");
     await recordCustomer({ clientId: store.clientId, storeId: store.id, customerName: o.customerName, email: o.email, placedAt: o.placedAt, shippingAddress: o.shippingAddress }).catch((err) =>
       console.error("recordCustomer:", err),
     );
@@ -218,13 +221,21 @@ export async function shipOrder(orderId: string, shipment: Shipment) {
   const short = stocked.filter((p) => p.stock < (needed.get(p.sku) ?? 0));
   if (short.length) throw new Error(`Stock insuficiente: ${short.map((p) => `${p.sku} (hay ${p.stock}, pide ${needed.get(p.sku)})`).join(", ")}`);
 
+  // Seguimiento con marca: la tienda enlaza a nuestra página y, si avisamos nosotros, ella no envía su email.
+  let storeShipment = shipment;
+  const prefs = await db.client.findUnique({ where: { id: order.clientId }, select: { trackingEnabled: true, notifyBuyer: true } });
+  if (prefs?.trackingEnabled) {
+    const page = await trackingPageUrl(order.id).catch(() => null);
+    storeShipment = { ...shipment, trackingUrl: page ?? shipment.trackingUrl, notifyCustomer: prefs.notifyBuyer !== "KARGIA" };
+  }
+
   let syncError: string | null = null;
   if (!order.store.isDemo) {
     try {
       if (order.store.platform === "SHOPIFY") {
-        await shopify.fulfillOrder(await shopifyCreds(order.store), order.externalId, shipment);
+        await shopify.fulfillOrder(await shopifyCreds(order.store), order.externalId, storeShipment);
       } else {
-        await woo.fulfillOrder(wooCreds(order.store), order.externalId, shipment);
+        await woo.fulfillOrder(wooCreds(order.store), order.externalId, storeShipment);
       }
     } catch (err) {
       syncError = err instanceof Error ? err.message : String(err);
@@ -250,11 +261,15 @@ export async function shipOrder(orderId: string, shipment: Shipment) {
         labelProvider: shipment.labelProvider ?? "MANUAL",
         labelRef: shipment.labelRef,
         weightGrams: shipment.weightGrams,
+        carrierServiceId: shipment.carrierServiceId ?? null,
+        shippingCostCents: shipment.shippingCostCents ?? null,
+        shippingChargeCents: shipment.shippingChargeCents ?? null,
         shippedAt: new Date(),
         syncError,
       },
     });
   });
+  notifyBuyerLater(order.id, "SHIPPED");
 
   // Aviso de stock bajo (también al cliente) al cruzar el mínimo.
   for (const p of before) {

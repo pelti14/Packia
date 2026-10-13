@@ -74,11 +74,18 @@ export async function usageForRange(client: Client, start: Date, end: Date): Pro
   const periodStart = from > start ? from : start;
   const periodEnd = stop && stop < end ? stop : end;
 
-  const [segments, shippedOrders, processedReturns, plans] = await Promise.all([
+  const [segments, shippedOrders, processedReturns, plans, transport] = await Promise.all([
     termsTimeline(client, periodStart, periodEnd),
     db.order.count({ where: { clientId: client.id, status: "SHIPPED", shippedAt: { gte: periodStart, lt: periodEnd } } }),
     db.return.count({ where: { clientId: client.id, status: "PROCESSED", processedAt: { gte: periodStart, lt: periodEnd } } }),
     getPlans(),
+    // Transporte: lo que se cobra por cada envío (coste de la agencia + margen), agrupado por agencia.
+    db.order.groupBy({
+      by: ["carrier"],
+      where: { clientId: client.id, status: "SHIPPED", shippedAt: { gte: periodStart, lt: periodEnd }, shippingChargeCents: { not: null } },
+      _sum: { shippingChargeCents: true },
+      _count: true,
+    }),
   ]);
   const label = (plan: string) => plans.find((p) => p.plan === plan)?.label ?? plan;
 
@@ -105,6 +112,10 @@ export async function usageForRange(client: Client, start: Date, end: Date): Pro
   // El exceso se cobra al precio del plan vigente al final del periodo.
   const extraCents = segments.at(-1)?.terms.extraCents ?? client.extraOrderFeeCents;
   if (extraOrders) lines.push({ description: `Pedidos adicionales (enviados ${shippedOrders}, incluidos ${includedOrders})`, quantity: extraOrders, unitPriceCents: extraCents, amountCents: extraOrders * extraCents });
+  for (const t of transport) {
+    const sum = t._sum.shippingChargeCents ?? 0;
+    if (sum > 0) lines.push({ description: `Transporte ${t.carrier ?? ""} (${t._count} ${t._count === 1 ? "envío" : "envíos"})`.replace("  ", " "), quantity: 1, unitPriceCents: sum, amountCents: sum });
+  }
   if (processedReturns) lines.push({ description: "Devoluciones procesadas", quantity: processedReturns, unitPriceCents: client.returnFeeCents, amountCents: processedReturns * client.returnFeeCents });
 
   const fraction = Math.min(1, days(periodStart, periodEnd) / daysInMonth);

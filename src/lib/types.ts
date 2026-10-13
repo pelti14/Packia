@@ -65,6 +65,12 @@ export type Shipment = {
   labelProvider?: "PACKIA" | "SENDCLOUD" | "MANUAL";
   labelRef?: string;
   weightGrams?: number;
+  /** Servicio de transporte y su coste/precio (céntimos), si hay tarifa en Transporte. */
+  carrierServiceId?: string | null;
+  shippingCostCents?: number | null;
+  shippingChargeCents?: number | null;
+  /** false = la tienda no avisa al comprador (lo avisamos nosotros con su marca). */
+  notifyCustomer?: boolean;
 };
 
 export const INBOUND_STATUS_LABEL = { EXPECTED: "Prevista", RECEIVED: "Recibida" } as const;

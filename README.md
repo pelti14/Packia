@@ -23,6 +23,9 @@ Documentación de negocio en [`docs/`](docs/): [cliente ideal](docs/cliente-idea
 | **Clientes** | Cambio de plan aplicable desde hoy (prorrateado), desde el día 1 de este mes o del siguiente. Peticiones del cliente, baja con último día de servicio, historial de planes y facturar hasta un día. Plan y tarifas de cada cliente (cuota, pedidos incluidos, precio por pedido adicional y por devolución), datos fiscales, **repartidor por defecto** y, opcionalmente, **su propia cuenta de Sendcloud** con sus contratos de agencia. |
 | **Sincronización** | Además de los webhooks, Kargia consulta todas las tiendas **cada minuto** (productos cada 30 min). Respaldo opcional con cron externo en `/api/cron/sync?key=CRON_SECRET`. |
 | **Tiendas** | Conexión con Shopify y WooCommerce, sincronización y webhooks. |
+| **Transporte** (v14) | Varias agencias con su **tarifa por zona y peso** (Península, Baleares, Canarias, Ceuta/Melilla, Portugal, Europa). En cada pedido se **recomienda la agencia** (por defecto, la más barata o la más rápida, según el cliente), se guarda coste y precio (coste + margen) y la factura del mes suma el **transporte por agencia**. Simulador de precios. |
+| **Alta en un clic** (v14) | **Invitaciones** con enlace de un solo uso (o alta abierta en `/alta`). La tienda crea su cuenta y sigue **Primeros pasos**: conectar **WooCommerce** (wc-auth, sin copiar claves) o **Shopify** (OAuth con app de Partners), catálogo, aviso de stock, marca y primer envío. |
+| **Seguimiento con marca** (v14) | Página pública `/seguimiento/…` con el logo y el color de la tienda (recibido → preparado → en camino → entregado). **Mi marca** para el cliente. Emails al comprador con su marca por SMTP (opcional, una vez por evento) o la tienda avisa con nuestro enlace. «Entregado» automático con el webhook de Sendcloud o a mano. |
 | **Usuarios** | Alta y edición de usuarios: nombre, email, rol, empresa y contraseña. |
 | **Ajustes** | **Marca**: nombre comercial, texto bajo el nombre, logo y contacto (WhatsApp, teléfono, email), para toda la app, el acceso de los clientes, el título de la pestaña y la web de GoHighLevel. **Planes y precios** editables (opcionalmente aplicados a los clientes actuales desde hoy o desde el mes que viene; la web de GoHighLevel los lee de `/api/public/planes`). Datos fiscales, remitente de las etiquetas, claves de Sendcloud y estado del sistema (incluido el botón para actualizar la base de datos). |
 
@@ -76,7 +79,9 @@ Comandos útiles:
 **Shopify**: desde 2026 la app la crea el dueño de la tienda en el *Dev Dashboard* y da a Kargia el dominio `.myshopify.com`, el **Client ID** y el **Client secret**. Kargia pide y renueva el token solo (dura 24 h) y crea los webhooks automáticamente.
 Guía para enviar a los clientes: **[docs/conectar-shopify.md](docs/conectar-shopify.md)**. Las apps antiguas con token `shpat_` también se aceptan.
 
-**WooCommerce**
+**En un clic (v14)**: invita a la tienda desde **Clientes → Invitar tienda**; ella misma conecta Shopify o WooCommerce desde **Primeros pasos**. Guía: **[docs/v14-transporte-alta-seguimiento.md](docs/v14-transporte-alta-seguimiento.md)**.
+
+**WooCommerce (manual)**
 1. En WooCommerce → Ajustes → Avanzado → REST API, crea una clave con permisos de lectura y escritura.
 2. En Kargia, ve a Tiendas → Conectar tienda, con la URL `https://…` y las claves `ck_…` / `cs_…`.
 3. Copia la URL y el secreto que muestra la ficha de la tienda y crea los webhooks *Pedido creado* y *Pedido actualizado*.
@@ -87,7 +92,6 @@ Next.js 15 (App Router, Server Actions, middleware) · React 19 · TypeScript ·
 
 ## Próximos pasos
 
-- [ ] Registrar los webhooks automáticamente al conectar la tienda.
 - [ ] Escaneo de códigos de barras desde el móvil en picking y recepción.
 - [ ] Domiciliación SEPA automática de las facturas (Stripe o GoCardless).
 - [ ] Avisos por email al cliente: stock bajo, recepción confirmada, factura emitida.

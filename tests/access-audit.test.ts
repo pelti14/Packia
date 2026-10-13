@@ -22,6 +22,10 @@ const PUBLIC_ROUTES = [
   "app/api/public/marca/logo/route.ts", // solo el logo
   "app/auth/callback/route.ts", // canje del código de Supabase
   "app/auth/signout/route.ts",
+  "app/api/shopify/callback/route.ts", // firma HMAC de Shopify + estado de un solo uso
+  "app/api/woocommerce/callback/route.ts", // estado de un solo uso creado por un usuario logueado
+  "app/api/webhooks/sendcloud/route.ts", // firma HMAC de Sendcloud
+  "app/seguimiento/[token]/logo/route.ts", // solo el logo de la tienda, con el token del pedido
 ];
 const AUTH = /requireUser\(|getCurrentUser\(|assertRole\(|clientUser\(/;
 
@@ -45,7 +49,7 @@ test("las rutas de API comprueban sesión salvo las públicas declaradas", () =>
 });
 
 test("cada acción de servidor exportada comprueba quién la llama", () => {
-  const SELF_SERVICE = new Set(["signIn", "signOut", "requestPasswordReset", "updatePassword"]); // login y contraseña
+  const SELF_SERVICE = new Set(["signIn", "signOut", "requestPasswordReset", "updatePassword", "signupAction"]); // login, contraseña y alta (invitación + límite por IP)
   let checked = 0;
   for (const f of files.filter((x) => fs.readFileSync(x, "utf8").startsWith('"use server"'))) {
     const src = fs.readFileSync(f, "utf8");
@@ -62,7 +66,7 @@ test("cada acción de servidor exportada comprueba quién la llama", () => {
 });
 
 test("los webhooks verifican la firma antes de leer el pedido", () => {
-  for (const f of ["app/api/webhooks/shopify/route.ts", "app/api/webhooks/woocommerce/route.ts"]) {
+  for (const f of ["app/api/webhooks/shopify/route.ts", "app/api/webhooks/woocommerce/route.ts", "app/api/webhooks/sendcloud/route.ts"]) {
     const src = fs.readFileSync(path.join(root, f), "utf8");
     assert.match(src, /await req\.text\(\)/, `${f}: debe usar el cuerpo sin procesar`);
     const verifyAt = src.indexOf("verifyWebhook(");

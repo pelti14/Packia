@@ -8,6 +8,8 @@ import { billableFrom } from "@/lib/billing";
 import { startOfMonth } from "@/lib/format";
 import { Card, CardHeader, EmptyState, PageHeader, PlatformBadge, SearchBar } from "@/components/ui";
 import { NewClientForm } from "./new-client-form";
+import { InvitesCard } from "./invites";
+import { getAppUrl } from "@/lib/app-url";
 
 export default async function ClientsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const { q } = await searchParams;
@@ -23,6 +25,13 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   });
   const quotaOf = new Map(await Promise.all(clients.map(async (c) => [c.id, await monthlyIncluded(c)] as const)));
   const plans = await getPlans();
+  const [invites, signup, appUrl] = admin
+    ? await Promise.all([
+        db.invite.findMany({ orderBy: { createdAt: "desc" }, take: 10 }),
+        db.appSettings.findUnique({ where: { id: "default" }, select: { openSignup: true, defaultTrialWeeks: true } }),
+        getAppUrl(),
+      ])
+    : [[], null, ""];
 
   return (
     <>
@@ -87,10 +96,22 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
         </div>
 
         {admin && (
-          <Card className="h-fit">
-            <CardHeader title="Nuevo cliente" subtitle="Tarifas por defecto del plan; ajústalas en su ficha" />
-            <NewClientForm plans={plans} />
-          </Card>
+          <div className="space-y-6">
+            <Card className="h-fit">
+              <CardHeader title="Invitar tienda" subtitle="Se da de alta y conecta su tienda ella sola" />
+              <InvitesCard
+                appUrl={appUrl}
+                plans={plans.map((p) => ({ plan: p.plan, label: p.label }))}
+                invites={invites.map((i) => ({ id: i.id, token: i.token, email: i.email, companyName: i.companyName, plan: i.plan, expiresAt: i.expiresAt.toISOString(), used: Boolean(i.usedAt) }))}
+                openSignup={signup?.openSignup ?? false}
+                defaultTrialWeeks={signup?.defaultTrialWeeks ?? 2}
+              />
+            </Card>
+            <Card className="h-fit">
+              <CardHeader title="Nuevo cliente" subtitle="Tarifas por defecto del plan; ajústalas en su ficha" />
+              <NewClientForm plans={plans} />
+            </Card>
+          </div>
         )}
       </div>
     </>

@@ -1,6 +1,6 @@
 {
   "name": "packia",
-  "version": "13.0.0",
+  "version": "14.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -26,6 +26,7 @@
     "clsx": "^2.1.1",
     "lucide-react": "^1.55.0",
     "next": "^15.5.27",
+    "nodemailer": "^6.10.1",
     "pdf-lib": "^1.17.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
@@ -33,6 +34,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^26.6.5",
+    "@types/nodemailer": "^6.4.17",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "prisma": "^6.19.3",

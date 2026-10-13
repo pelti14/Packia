@@ -193,7 +193,7 @@ export async function fulfillOrder(creds: ShopifyCreds, externalOrderId: string,
     }`,
     {
       fulfillment: {
-        notifyCustomer: true,
+        notifyCustomer: shipment.notifyCustomer ?? true,
         trackingInfo: { company: shipment.carrier, number: shipment.trackingNumber, url: shipment.trackingUrl },
         lineItemsByFulfillmentOrder: open.map((fo) => ({ fulfillmentOrderId: fo.id })),
       },

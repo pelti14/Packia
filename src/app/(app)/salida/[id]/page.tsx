@@ -4,7 +4,8 @@ import { clsx } from "clsx";
 import { Check, ExternalLink, MapPin, PackageOpen, Printer, RotateCcw, Truck } from "lucide-react";
 import { db } from "@/lib/db";
 import { canAccessClient, isStaff, requireUser } from "@/lib/auth";
-import { packOrder, revertOrder } from "@/app/actions";
+import { markDelivered, packOrder, revertOrder } from "@/app/actions";
+import { eur } from "@/lib/format";
 import { estimateWeight, shippingOptionsFor } from "@/lib/labels";
 import { formatDate, parseAddress } from "@/lib/format";
 import { urgency, slaStart } from "@/lib/schedule";
@@ -12,6 +13,7 @@ import { ORDER_FLOW, STATUS_LABEL, type OrderStatus } from "@/lib/types";
 import { BackLink, Card, CardHeader, Notice, PlatformBadge, Pill, StatusBadge } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { ShipForm } from "./ship-form";
+import { adviceFor } from "@/lib/shipping";
 import { getPrintSettings } from "@/lib/labels/print";
 import { PickList } from "@/components/pick-list";
 import { BlockersNotice } from "@/components/blockers-notice";
@@ -35,6 +37,8 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   const u = urgency(slaStart(order));
 
   const shipping = staff && status === "PACKED" ? await shippingOptionsFor(order.client) : null;
+  const weightGrams = shipping ? await estimateWeight(order) : 0;
+  const advice = shipping ? await adviceFor(order.client, parseAddress(order.shippingAddress), weightGrams, shipping.options) : null;
   const blockers = staff && open ? await orderBlockers(order) : [];
 
   return (
@@ -124,12 +128,35 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                     <div className="flex items-center gap-2 text-sm font-semibold text-mint-600"><Truck className="h-4 w-4" /> {order.carrier}</div>
                     <div className="mono mt-1 text-ink-900">{order.trackingNumber}</div>
                     {order.shippedAt && <div className="mt-1 text-xs text-ink-500">Enviado {formatDate(order.shippedAt)}{order.weightGrams ? ` · ${order.weightGrams} g` : ""}</div>}
-                    {order.trackingUrl && (
-                      <a href={order.trackingUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:underline">
-                        Seguimiento <ExternalLink className="h-3 w-3" />
-                      </a>
+                    {order.deliveredAt ? (
+                      <div className="mt-1 text-xs font-semibold text-mint-600">Entregado {formatDate(order.deliveredAt)}</div>
+                    ) : order.carrierStatus ? (
+                      <div className="mt-1 text-xs text-ink-500">Estado: {order.carrierStatus}</div>
+                    ) : null}
+                    {(order.shippingChargeCents != null || order.shippingCostCents != null) && (
+                      <div className="mt-1 text-xs text-ink-500">
+                        Transporte: <b className="text-ink-900">{eur(order.shippingChargeCents ?? 0)}</b>
+                        {user.role === "ADMIN" && order.shippingCostCents != null && ` · coste ${eur(order.shippingCostCents)} · margen ${eur((order.shippingChargeCents ?? 0) - order.shippingCostCents)}`}
+                      </div>
                     )}
+                    <div className="mt-2 flex flex-wrap gap-3">
+                      {order.trackingUrl && (
+                        <a href={order.trackingUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:underline">
+                          Seguimiento <ExternalLink className="h-3 w-3" />
+                        </a>
+                      )}
+                      {order.trackingToken && (
+                        <a href={`/seguimiento/${order.trackingToken}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:underline">
+                          Página del comprador <ExternalLink className="h-3 w-3" />
+                        </a>
+                      )}
+                    </div>
                   </div>
+                  {staff && !order.deliveredAt && (
+                    <form action={markDelivered.bind(null, order.id)}>
+                      <SubmitButton variant="ghost" className="w-full"><Check className="h-4 w-4" /> Marcar como entregado</SubmitButton>
+                    </form>
+                  )}
                   {order.labelProvider && order.labelProvider !== "MANUAL" && (
                     <>
                       {staff && (
@@ -155,7 +182,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
               {status === "SHIPPED" || !staff ? null : status === "PACKED" ? (
                 blockers.length ? null : <>
                   {shipping?.error && <Notice tone="error">Sendcloud no disponible: {shipping.error}</Notice>}
-                  <ShipForm orderId={order.id} weightGrams={await estimateWeight(order)} options={shipping!.options} defaultValue={shipping!.defaultValue} printOnPack={(await getPrintSettings()).printOnPack} />
+                  <ShipForm orderId={order.id} weightGrams={weightGrams} options={shipping!.options} defaultValue={advice?.method ?? shipping!.defaultValue} advice={advice} printOnPack={(await getPrintSettings()).printOnPack} />
                 </>
               ) : status !== "CANCELLED" ? (
                 blockers.length ? null : (

@@ -9,8 +9,11 @@ import { BrandName } from "@/components/brand";
 
 type Option = { value: string; label: string; group: string };
 
-export function ShippingForm({ clientId, options, current, ownSendcloud, error }: {
+export function ShippingForm({ clientId, options, current, ownSendcloud, error, strategy, markup }: {
   clientId: string;
+  strategy: string;
+  /** Margen propio en € con coma, o "" para usar el general. */
+  markup: string;
   options: Option[];
   current: string | null;
   ownSendcloud: boolean;
@@ -39,6 +42,22 @@ export function ShippingForm({ clientId, options, current, ownSendcloud, error }
           ))}
         </select>
       </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="label" htmlFor="shippingStrategy">Elegir agencia en cada pedido</label>
+          <select id="shippingStrategy" name="shippingStrategy" defaultValue={strategy} className="input">
+            <option value="DEFAULT">La de por defecto (si tiene tarifa)</option>
+            <option value="CHEAPEST">La más barata para cada envío</option>
+            <option value="FASTEST">La más rápida para cada envío</option>
+          </select>
+        </div>
+        <div>
+          <label className="label" htmlFor="shippingMarkup">Margen por envío (€)</label>
+          <input id="shippingMarkup" name="shippingMarkup" defaultValue={markup} inputMode="decimal" placeholder="El general de Transporte" className="input mono" />
+        </div>
+      </div>
+      <p className="-mt-2 text-xs text-ink-400">Usa las tarifas de <b>Transporte</b>: coste de la agencia + margen = lo que se le factura por cada envío.</p>
 
       <div className="rounded-2xl border border-line bg-white/60 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">

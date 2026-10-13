@@ -13,6 +13,8 @@ Dónde sacar cada variable, paso a paso, para cuando haya que volver a ponerlas:
 | 5 | `DIRECT_URL` | Sí | Supabase → botón **Connect** → ORMs → Prisma |
 | 6 | `ENCRYPTION_KEY` | Sí, pero se puede poner después del primer deploy | La genera la app en `/setup` |
 | 7 | `NEXT_PUBLIC_APP_URL` | No | Tu dominio, por ejemplo `https://app.tudominio.com` |
+| 8 | `SHOPIFY_API_KEY` y `SHOPIFY_API_SECRET` | No (para conectar Shopify en un clic) | Shopify Partners → tu app → Client ID y Client secret |
+| 9 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | No (para los emails al comprador) | Hostinger → Emails → tu buzón |
 
 > **Regla de oro:** los valores se pegan **sin comillas** en Hostinger. Después de añadir o cambiar una variable, pulsa **Redeploy**.
 
@@ -94,6 +96,22 @@ Alternativa con terminal: `openssl rand -base64 32`
 La dirección pública de la app, con `https://` y **sin barra al final**, por ejemplo `https://app.tudominio.com`.
 - Mientras uses la URL temporal de Hostinger, puedes no ponerla: la app usa la dirección desde la que se abre.
 - Cuando tengas el dominio definitivo, añádela y pulsa **Redeploy**.
+
+---
+
+## 8. `SHOPIFY_API_KEY` y `SHOPIFY_API_SECRET` (opcionales)
+Son el Client ID y el Client secret de la app «Kargia» en Shopify Partners. Con ellas, las tiendas conectan Shopify con un botón. Los pasos están en [v14-transporte-alta-seguimiento.md](v14-transporte-alta-seguimiento.md#shopify-en-un-clic-hay-que-crear-una-app-una-vez).
+
+## 9. Emails: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` y `SMTP_FROM` (opcionales)
+Son los datos de un buzón de correo para enviar los avisos al comprador con la marca de cada tienda. Con Hostinger:
+
+| Variable | Valor |
+|---|---|
+| `SMTP_HOST` | `smtp.hostinger.com` |
+| `SMTP_PORT` | `465` |
+| `SMTP_USER` | el buzón, por ejemplo `envios@kargia.eu` |
+| `SMTP_PASS` | la contraseña del buzón |
+| `SMTP_FROM` | el mismo buzón |
 
 ---
 
