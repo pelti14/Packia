@@ -1,6 +1,6 @@
 {
   "name": "packia",
-  "version": "12.1.0",
+  "version": "13.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -12,7 +12,8 @@
     "db:seed": "tsx --env-file=.env prisma/seed.ts",
     "create-admin": "tsx --env-file=.env scripts/create-admin.ts",
     "postinstall": "prisma generate",
-    "setup:sql": "tsx scripts/build-setup-sql.ts"
+    "setup:sql": "tsx scripts/build-setup-sql.ts",
+    "test": "node --env-file-if-exists=.env --import tsx --test tests/*.test.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

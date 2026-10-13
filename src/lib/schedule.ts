@@ -96,6 +96,15 @@ export function dueKey(placedAt: Date): string {
 
 export type Urgency = "OVERDUE" | "TODAY" | "LATER";
 
+/**
+ * Desde cuándo cuenta el plazo de salida: desde que el pedido llega al almacén (se crea en la app),
+ * no desde la fecha de compra en la tienda. Así, los pedidos antiguos importados al conectar una
+ * tienda o los que llegan con retraso de la tienda no cuentan como retrasos del almacén.
+ */
+export function slaStart(o: { placedAt: Date; createdAt?: Date | null }): Date {
+  return o.createdAt && o.createdAt > o.placedAt ? o.createdAt : o.placedAt;
+}
+
 export function urgency(placedAt: Date, now = new Date()): Urgency {
   const due = dueKey(placedAt);
   const today = dayKey(now);

@@ -32,6 +32,15 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
     db.product.count({ where: { ...clientScope(user), validatedAt: null } }),
   ]);
 
+  // Reservado = unidades de pedidos abiertos (pendientes, preparando o embalados) aún no enviados.
+  const openItems = await db.orderItem.findMany({
+    where: { order: { ...clientScope(user), status: { in: ["PENDING", "PICKING", "PACKED"] } } },
+    select: { sku: true, quantity: true, order: { select: { clientId: true } } },
+  });
+  const reserved = new Map<string, number>();
+  for (const i of openItems) reserved.set(`${i.order.clientId}|${i.sku}`, (reserved.get(`${i.order.clientId}|${i.sku}`) ?? 0) + i.quantity);
+  const reservedOf = (p: { clientId: string; sku: string }) => reserved.get(`${p.clientId}|${p.sku}`) ?? 0;
+  const short = products.filter((p) => p.stock - reservedOf(p) < 0).length;
   const units = products.reduce((s, p) => s + p.stock, 0);
   const low = products.filter((p) => p.stock > 0 && p.stock <= p.lowStockAt).length;
   const out = products.filter((p) => p.stock <= 0).length;
@@ -76,7 +85,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
         <StatCard label="Referencias" value={products.length} icon={Layers} tone="brand" />
         <StatCard label="Unidades en almacén" value={units.toLocaleString("es-ES")} icon={Boxes} tone="aqua" />
         <StatCard label="Stock bajo" value={low} icon={TriangleAlert} tone="amber" />
-        <StatCard label="Agotados" value={out} icon={PackageX} tone="amber" />
+        <StatCard label="Agotados" value={out} hint={short ? `${short} con pedidos sin stock suficiente` : undefined} icon={PackageX} tone="amber" />
       </div>
 
       <Card className="overflow-hidden">
@@ -88,13 +97,13 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
                   <th className="table-head">Producto</th>
                   <th className="table-head">Cliente</th>
                   <th className="table-head">Ubicación</th>
-                  <th className="table-head">Stock</th>
+                  <th className="table-head">Stock <span className="font-normal normal-case tracking-normal text-ink-400">(físico · reservado · disponible)</span></th>
                   <th className="table-head">Peso</th>
                   {staff && <th className="table-head" />}
                 </tr>
               </thead>
               <tbody className="divide-y divide-line/60">
-                {products.map((p) => <ProductRow key={p.id} product={p} clientName={p.client.name} editable={staff} validated={Boolean(p.validatedAt)} />)}
+                {products.map((p) => <ProductRow key={p.id} product={p} reserved={reservedOf(p)} clientName={p.client.name} editable={staff} validated={Boolean(p.validatedAt)} />)}
               </tbody>
             </table>
           </div>

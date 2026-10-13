@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { clientScope, type CurrentUser } from "@/lib/auth";
-import { startOfDay, urgency } from "@/lib/schedule";
+import { startOfDay, urgency, slaStart } from "@/lib/schedule";
 
 export type Tone = "info" | "success" | "warning" | "danger";
 
@@ -48,7 +48,7 @@ export async function getBadges(user: CurrentUser): Promise<Badges> {
   const today = startOfDay();
   const threeDaysAgo = new Date(Date.now() - 3 * 86_400_000);
   const [open, inbound, inboundLate, returns, returnsLate, storeErrors, toValidate, toPrint] = await Promise.all([
-    db.order.findMany({ where: { ...scope, status: { in: ["PENDING", "PICKING", "PACKED"] } }, select: { placedAt: true, clientId: true, items: { select: { sku: true } } } }),
+    db.order.findMany({ where: { ...scope, status: { in: ["PENDING", "PICKING", "PACKED"] } }, select: { placedAt: true, createdAt: true, clientId: true, items: { select: { sku: true } } } }),
     db.inbound.count({ where: { ...scope, status: "EXPECTED" } }),
     db.inbound.count({ where: { ...scope, status: "EXPECTED", expectedAt: { lt: today } } }),
     db.return.count({ where: { ...scope, status: { in: ["ANNOUNCED", "RECEIVED"] } } }),
@@ -60,8 +60,8 @@ export async function getBadges(user: CurrentUser): Promise<Badges> {
   // Rojo si algún pedido abierto está bloqueado por un producto sin validar.
   const pendingKeys = new Set(toValidate.map((p) => `${p.clientId}|${p.sku}`));
   const blocking = open.some((o) => o.items.some((i) => pendingKeys.has(`${o.clientId}|${i.sku}`)));
-  const due = open.filter((o) => urgency(o.placedAt) !== "LATER");
-  const overdue = due.filter((o) => urgency(o.placedAt) === "OVERDUE").length;
+  const due = open.filter((o) => urgency(slaStart(o)) !== "LATER");
+  const overdue = due.filter((o) => urgency(slaStart(o)) === "OVERDUE").length;
   const badge = (count: number, red: boolean): Badge => (count > 0 ? { count, tone: red ? "red" : "green" } : null);
   return {
     salida: badge(due.length, overdue > 0),

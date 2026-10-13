@@ -15,6 +15,7 @@ import { CARRIERS, ORDER_FLOW, RETURN_FEE_CENTS, type OrderStatus } from "@/lib/
 import { changeTerms, clientTerms, getPlans, nextMonthStart, sameTerms } from "@/lib/plans";
 import { startOfDay, startOfMonth } from "@/lib/schedule";
 import { formatDateOnly } from "@/lib/format";
+import { safeRedirectPath } from "@/lib/security";
 
 export type FormState = { error?: string; success?: string; values?: Record<string, string> } | undefined;
 
@@ -291,7 +292,7 @@ export async function advanceOrder(orderId: string) {
 export async function advanceOrders(form: FormData) {
   await assertRole(["ADMIN", "STAFF"]);
   const ids = form.getAll("ids").map(String);
-  const orders = await db.order.findMany({ where: { id: { in: ids }, status: { in: ["PENDING", "PICKING"] } }, include: { items: { select: { sku: true, name: true } } } });
+  const orders = await db.order.findMany({ where: { id: { in: ids }, status: { in: ["PENDING", "PICKING"] } }, include: { items: { select: { sku: true, name: true, quantity: true } } } });
   for (const o of orders) {
     // A "Embalado" solo pasan los pedidos con todos sus productos validados.
     if (o.status === "PICKING" && (await orderBlockers(o)).length) continue;
@@ -303,7 +304,7 @@ export async function advanceOrders(form: FormData) {
 /** Marca como embalado (desde Pendiente o Preparando). Bloqueado si hay productos sin validar. */
 export async function packOrder(orderId: string): Promise<FormState> {
   await assertRole(["ADMIN", "STAFF"]);
-  const order = await db.order.findUniqueOrThrow({ where: { id: orderId }, select: { clientId: true, items: { select: { sku: true, name: true } } } });
+  const order = await db.order.findUniqueOrThrow({ where: { id: orderId }, select: { clientId: true, items: { select: { sku: true, name: true, quantity: true } } } });
   const blockers = await orderBlockers(order);
   if (blockers.length) return { error: blockerMessage(blockers) };
   await db.order.updateMany({ where: { id: orderId, status: { in: ["PENDING", "PICKING"] } }, data: { status: "PACKED" } });
@@ -362,9 +363,13 @@ export async function shipOrderAction(orderId: string, _: FormState, form: FormD
   const carrier = str(form.get("carrier"));
   const trackingNumber = str(form.get("trackingNumber"));
   if (!carrier || !trackingNumber) return { error: "Agencia y número de seguimiento son obligatorios", values: keep(form, ["carrier", "trackingNumber"]) };
-  const blockers = await orderBlockers(await db.order.findUniqueOrThrow({ where: { id: orderId }, select: { clientId: true, items: { select: { sku: true, name: true } } } }));
+  const blockers = await orderBlockers(await db.order.findUniqueOrThrow({ where: { id: orderId }, select: { clientId: true, items: { select: { sku: true, name: true, quantity: true } } } }));
   if (blockers.length) return { error: blockerMessage(blockers), values: keep(form, ["carrier", "trackingNumber"]) };
-  await shipOrder(orderId, { carrier, trackingNumber, labelProvider: "MANUAL" });
+  try {
+    await shipOrder(orderId, { carrier, trackingNumber, labelProvider: "MANUAL" });
+  } catch (err) {
+    return { error: message(err), values: keep(form, ["carrier", "trackingNumber"]) };
+  }
   const order = await db.order.findUnique({ where: { id: orderId } });
   revalidatePath("/", "layout");
   if (order?.syncError) return { error: `Enviado, pero no se pudo avisar a la tienda: ${order.syncError}` };
@@ -410,7 +415,7 @@ export async function validateProduct(productId: string, next: string, _: FormSt
     select: { id: true },
   });
   revalidatePath("/", "layout");
-  redirect(next.startsWith("/") && !next.startsWith("//") ? next : "/inventario?tab=validar");
+  redirect(safeRedirectPath(next, "/inventario?tab=validar"));
 }
 
 export async function unvalidateProduct(productId: string) {

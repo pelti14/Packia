@@ -5,8 +5,11 @@ import { getBrand } from "@/lib/brand";
 import { monthlyIncluded } from "@/lib/plans";
 import { clientScope, isStaff, requireUser } from "@/lib/auth";
 import { formatDateOnly, formatDay, timeAgo, units } from "@/lib/format";
-import { addDays, dayKey, shippedOnTime, startOfDay, startOfMonth, urgency } from "@/lib/schedule";
+import { addDays, dayKey, shippedOnTime, startOfDay, startOfMonth, urgency, slaStart } from "@/lib/schedule";
 import { Card, CardHeader, EmptyState, Notice, PageHeader, PlatformBadge, StatCard, StatusBadge } from "@/components/ui";
+
+/** Con pocos envíos el porcentaje engaña (1 envío tarde = 0 %): no se muestra hasta tener muestra. */
+const MIN_SLA_SAMPLE = 10;
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { error } = await searchParams;
@@ -24,7 +27,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       include: { client: true, store: true, items: true },
     }),
     db.order.count({ where: { ...scope, status: "SHIPPED", shippedAt: { gte: today } } }),
-    db.order.findMany({ where: { ...scope, status: "SHIPPED", shippedAt: { gte: since30 } }, select: { placedAt: true, shippedAt: true } }),
+    db.order.findMany({ where: { ...scope, status: "SHIPPED", shippedAt: { gte: since30 } }, select: { placedAt: true, createdAt: true, shippedAt: true } }),
     db.order.findMany({ where: { ...scope, placedAt: { gte: since14 } }, select: { placedAt: true } }),
     db.client.findMany({
       where: scope.clientId ? { id: scope.clientId } : undefined,
@@ -36,9 +39,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   ]);
 
   const quotaOf = new Map(await Promise.all(clients.map(async (c) => [c.id, await monthlyIncluded(c)] as const)));
-  const dueNow = openOrders.filter((o) => urgency(o.placedAt) !== "LATER");
-  const overdue = openOrders.filter((o) => urgency(o.placedAt) === "OVERDUE").length;
-  const onTime = recentShipped.filter((o) => o.shippedAt && shippedOnTime(o.placedAt, o.shippedAt)).length;
+  const dueNow = openOrders.filter((o) => urgency(slaStart(o)) !== "LATER");
+  const overdue = openOrders.filter((o) => urgency(slaStart(o)) === "OVERDUE").length;
+  const onTime = recentShipped.filter((o) => o.shippedAt && shippedOnTime(slaStart(o), o.shippedAt)).length;
   const onTimeRate = recentShipped.length ? Math.round((onTime / recentShipped.length) * 1000) / 10 : 100;
   const lowStock = products.filter((p) => p.stock <= p.lowStockAt).sort((a, b) => a.stock - b.stock).slice(0, 5);
 
@@ -71,9 +74,13 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard label="Para hoy" value={dueNow.length} hint={`${openOrders.length} en cola en total`} icon={Clock3} tone="amber" />
-        <StatCard label="Retrasados" value={overdue} hint="Debían haber salido antes de hoy" icon={Siren} tone={overdue ? "rose" : "mint"} />
+        <StatCard label="Retrasados" value={overdue} hint="Llegaron al almacén antes del corte de un día anterior y aún no han salido" icon={Siren} tone={overdue ? "rose" : "mint"} />
         <StatCard label="Enviados hoy" value={shippedToday} hint="Con seguimiento devuelto a la tienda" icon={Send} tone="mint" />
-        <StatCard label="A tiempo · 30 días" value={`${onTimeRate}%`} hint={`${onTime} de ${recentShipped.length} envíos en plazo`} icon={Target} tone="brand" />
+        {recentShipped.length >= MIN_SLA_SAMPLE ? (
+          <StatCard label="A tiempo · 30 días" value={`${onTimeRate}%`} hint={`${onTime} de ${recentShipped.length} envíos salieron el día que tocaba`} icon={Target} tone="brand" />
+        ) : (
+          <StatCard label="A tiempo · 30 días" value="—" hint={`Se calcula a partir de ${MIN_SLA_SAMPLE} envíos (llevamos ${recentShipped.length})`} icon={Target} tone="brand" />
+        )}
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-3">
@@ -149,7 +156,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           {openOrders.length ? (
             <ul className="divide-y divide-line/70">
               {openOrders.slice(0, 6).map((o) => {
-                const u = urgency(o.placedAt);
+                const u = urgency(slaStart(o));
                 return (
                   <li key={o.id}>
                     <Link href={`/salida/${o.id}`} className="flex items-center gap-4 px-5 py-3.5 transition hover:bg-brand-50/40">

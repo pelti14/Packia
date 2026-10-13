@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { estimateWeight, shippingOptionsFor } from "@/lib/labels";
 import { parseAddress } from "@/lib/format";
-import { urgency } from "@/lib/schedule";
+import { urgency, slaStart } from "@/lib/schedule";
 import { BackLink, Card, Notice, PageHeader } from "@/components/ui";
 import { Station } from "./station";
 import { BlockersNotice } from "@/components/blockers-notice";
@@ -24,8 +24,8 @@ export default async function PrepararPage({ searchParams }: { searchParams: Pro
   });
   // Primero los retrasados, luego los de hoy y después el resto; dentro, el más antiguo primero.
   const queue = all
-    .filter((x) => !hoy || urgency(x.placedAt) !== "LATER")
-    .sort((a, b) => RANK[urgency(a.placedAt)] - RANK[urgency(b.placedAt)] || a.placedAt.getTime() - b.placedAt.getTime());
+    .filter((x) => !hoy || urgency(slaStart(x)) !== "LATER")
+    .sort((a, b) => RANK[urgency(slaStart(a))] - RANK[urgency(slaStart(b))] || slaStart(a).getTime() - slaStart(b).getTime());
 
   const base = `/salida/preparar?clients=${clientIds.join(",")}${hoy ? "&hoy=1" : ""}`;
   const shippedLabel = etiqueta ? await db.order.findUnique({ where: { id: etiqueta }, select: { id: true, number: true, labelProvider: true, status: true, labelPrintedAt: true } }) : null;
@@ -113,7 +113,7 @@ export default async function PrepararPage({ searchParams }: { searchParams: Pro
           clientName: current.client.name,
           customerName: current.customerName,
           address: [a.name, a.address1, a.address2, `${a.zip} ${a.city}`, a.country].filter(Boolean).join(" · "),
-          urgent: urgency(current.placedAt),
+          urgent: urgency(slaStart(current)),
         }}
         items={[...current.items]
           .sort((x, y) => (bySku.get(x.sku)?.location ?? "ZZ").localeCompare(bySku.get(y.sku)?.location ?? "ZZ"))

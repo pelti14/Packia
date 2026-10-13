@@ -69,7 +69,7 @@ export function Station(props: {
 
       <div className="space-y-4 xl:col-span-2">
         <div className="glass space-y-4 p-6">
-          {blocked && <p className="text-center text-sm font-medium text-amber-600">Valida los productos marcados arriba para poder embalar.</p>}
+          {blocked && <p className="text-center text-sm font-medium text-amber-600">Resuelve lo marcado arriba (validar el producto o falta de stock) para poder embalar.</p>}
           {!packed && (
             <button type="button" onClick={pack} disabled={pending || blocked} className="btn-primary w-full py-4 text-base">
               <PackageCheck className="h-5 w-5" /> {pending ? "Guardando…" : "Embalado · siguiente"} <ArrowRight className="h-5 w-5" />

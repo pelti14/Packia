@@ -211,6 +211,13 @@ export async function shipOrder(orderId: string, shipment: Shipment) {
   const order = await db.order.findUniqueOrThrow({ where: { id: orderId }, include: { store: true, items: true } });
   if (order.status === "SHIPPED") return;
 
+  // El stock físico nunca queda en negativo: si falta, no se envía (antes de avisar a la tienda).
+  const needed = new Map<string, number>();
+  for (const i of order.items) needed.set(i.sku, (needed.get(i.sku) ?? 0) + i.quantity);
+  const stocked = await db.product.findMany({ where: { clientId: order.clientId, sku: { in: [...needed.keys()] } }, select: { sku: true, stock: true } });
+  const short = stocked.filter((p) => p.stock < (needed.get(p.sku) ?? 0));
+  if (short.length) throw new Error(`Stock insuficiente: ${short.map((p) => `${p.sku} (hay ${p.stock}, pide ${needed.get(p.sku)})`).join(", ")}`);
+
   let syncError: string | null = null;
   if (!order.store.isDemo) {
     try {
@@ -226,14 +233,14 @@ export async function shipOrder(orderId: string, shipment: Shipment) {
 
   const before = await db.product.findMany({ where: { clientId: order.clientId, sku: { in: order.items.map((i) => i.sku) } } });
 
-  await db.$transaction([
-    ...order.items.map((item) =>
-      db.product.updateMany({
-        where: { clientId: order.clientId, sku: item.sku },
-        data: { stock: { decrement: item.quantity } },
-      }),
-    ),
-    db.order.update({
+  await db.$transaction(async (tx) => {
+    for (const [sku, qty] of needed) {
+      if (!stocked.some((p) => p.sku === sku)) continue; // SKU sin ficha: no hay stock que descontar
+      // Descuento atómico solo si sigue habiendo unidades (evita negativos con envíos simultáneos).
+      const r = await tx.product.updateMany({ where: { clientId: order.clientId, sku, stock: { gte: qty } }, data: { stock: { decrement: qty } } });
+      if (r.count === 0) throw new Error(`Stock insuficiente de ${sku}`);
+    }
+    await tx.order.update({
       where: { id: order.id },
       data: {
         status: "SHIPPED",
@@ -246,8 +253,8 @@ export async function shipOrder(orderId: string, shipment: Shipment) {
         shippedAt: new Date(),
         syncError,
       },
-    }),
-  ]);
+    });
+  });
 
   // Aviso de stock bajo (también al cliente) al cruzar el mínimo.
   for (const p of before) {

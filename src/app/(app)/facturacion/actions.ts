@@ -8,6 +8,7 @@ import { cancelInvoice, issueAllInvoices, issueInvoiceUntil, issueMonthInvoice, 
 import { notify } from "@/lib/notifications";
 import { eur } from "@/lib/format";
 import { monthKey } from "@/lib/schedule";
+import { safeRedirectPath } from "@/lib/security";
 
 type Invoice = { id: string; number: string; totalCents: number };
 
@@ -16,7 +17,8 @@ async function announce(clientId: string, invoice: Invoice) {
 }
 
 /** Los errores vuelven a la página como aviso en lugar de romperla. */
-async function run(back: string, fn: () => Promise<Invoice | void>) {
+async function run(rawBack: string, fn: () => Promise<Invoice | void>) {
+  const back = safeRedirectPath(rawBack, "/facturacion");
   let target = back;
   try {
     const inv = await fn();

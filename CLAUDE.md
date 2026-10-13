@@ -1,6 +1,6 @@
 # Kargia (antes «Packia»): traspaso del proyecto para Claude
 
-Lee esto entero antes de tocar nada. Resume todo lo hablado y construido con el dueño del proyecto hasta la **v12.1.0** (octubre de 2026).
+Lee esto entero antes de tocar nada. Resume todo lo hablado y construido con el dueño del proyecto hasta la **v13.0.0** (octubre de 2026).
 
 ---
 
@@ -177,12 +177,19 @@ docs/                   cliente-ideal, estrategia-0-a-10k, puesta-en-marcha, var
 
 ---
 
+## 6b. Seguridad (v13): no romper
+- `src/lib/security.ts`: `safeRedirectPath` (usar en toda redirección con destino que venga del usuario), `securityHeaders` (en `next.config.ts`), `hardenCookie` y `RateLimiter` (login).
+- Cada página `[id]` debe usar `canAccessClient` o `requireUser([...])` sin CLIENT. Cada acción de servidor debe empezar comprobando el rol. **`npm test` lo audita** y falla si no.
+- El stock físico nunca puede quedar en negativo: `orderBlockers` (motivo `nostock`) y un descuento atómico en `shipOrder`.
+- El plazo de salida se cuenta desde `slaStart(order)`, que es la llegada a la app, no la fecha de compra.
+- Detalle punto por punto en `docs/seguridad.md`. Prueba de extremo a extremo: `tests/e2e/security.e2e.mjs`.
+
 ## 7. Cómo probar en local (entorno de Claude)
 
 - PostgreSQL local con las bases `packia` y `packia_shadow` (usuario y contraseña `postgres`). `.env` de desarrollo con `NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321`.
 - Supabase Auth se simula con un **servidor mock** (un script de Node que responde a `/auth/v1/token`, `/auth/v1/user` y `/auth/v1/admin/users`). Usuario de pruebas: `admin@packia.es` / `Admin1234!`.
 - Datos de demo: `npm run db:seed`. Se niega a ejecutarse si hay tiendas reales.
-- Comprobaciones: `npx tsc --noEmit`, `npm run build` y luego `next start`. Pruebas de extremo a extremo con Playwright; Chromium está en `/opt/pw-browsers`.
+- Comprobaciones: `npx tsc --noEmit`, **`npm test`**, `npm run build` y luego `next start`. Pruebas de extremo a extremo con Playwright; Chromium está en `/opt/pw-browsers`.
 - En el entorno remoto, el contenedor a veces se reinicia y hay que arrancar de nuevo PostgreSQL (`service postgresql start`), el mock y el servidor.
 
 ---
@@ -202,6 +209,7 @@ docs/                   cliente-ideal, estrategia-0-a-10k, puesta-en-marcha, var
 | 10 | Colores de Kargia en toda la app y contacto público. |
 | 11 / 11.1 | Facturas rectificativas (anular y corregir) y cola de etiquetas en la demo. |
 | 12 / 12.1 | Menú con scroll, imprimir cada etiqueta al embalar con recuadro, número de pedido grande y contenido en la etiqueta. |
+| 13 | Auditoría de seguridad: cabeceras, `?next=` seguro, límite de intentos de login, cookies endurecidas, pruebas automáticas, stock nunca negativo y plazo de salida desde la llegada al almacén. |
 
 ---
 

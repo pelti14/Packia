@@ -10,11 +10,13 @@ import { SubmitButton } from "@/components/submit-button";
 type Props = {
   product: { id: string; sku: string; name: string; imageUrl: string | null; stock: number; location: string | null; lowStockAt: number; weightGrams: number | null };
   clientName: string;
+  /** Unidades comprometidas en pedidos abiertos. */
+  reserved: number;
   editable: boolean;
   validated: boolean;
 };
 
-export function ProductRow({ product: p, clientName, editable, validated }: Props) {
+export function ProductRow({ product: p, reserved, clientName, editable, validated }: Props) {
   const [editing, setEditing] = useState(false);
   const [state, action] = useActionState<FormState, FormData>(async (prev, form) => {
     const r = await updateProduct(p.id, prev, form);
@@ -22,7 +24,8 @@ export function ProductRow({ product: p, clientName, editable, validated }: Prop
     return r;
   }, undefined);
 
-  const level = p.stock <= 0 ? "out" : p.stock <= p.lowStockAt ? "low" : "ok";
+  const available = p.stock - reserved;
+  const level = available < 0 ? "short" : available <= 0 ? "out" : available <= p.lowStockAt ? "low" : "ok";
   const formId = `product-${p.id}`;
 
   return (
@@ -64,22 +67,21 @@ export function ProductRow({ product: p, clientName, editable, validated }: Prop
             <input form={formId} name="lowStockAt" type="number" min={0} defaultValue={p.lowStockAt} className="input mono w-20 py-1.5" />
           </div>
         ) : (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={clsx("mono text-base font-semibold", p.stock < 0 ? "text-rose-500" : "text-ink-900")} title="Stock físico en el almacén">{p.stock}</span>
+            <span className="mono text-xs text-ink-400" title="Reservado para pedidos abiertos">· {reserved} res.</span>
             <span
-              className={clsx(
-                "mono text-base font-semibold",
-                level === "out" && "text-rose-500",
-                level === "low" && "text-amber-600",
-                level === "ok" && "text-ink-900",
-              )}
+              className={clsx("mono text-xs font-semibold", level === "short" || level === "out" ? "text-rose-500" : level === "low" ? "text-amber-600" : "text-mint-600")}
+              title="Disponible = físico − reservado"
             >
-              {p.stock}
+              · {available} disp.
             </span>
             {level !== "ok" && (
-              <span className={clsx("rounded-full px-2 py-0.5 text-[11px] font-medium", level === "out" ? "bg-rose-50 text-rose-500" : "bg-amber-50 text-amber-600")}>
-                {level === "out" ? "Agotado" : "Bajo"}
+              <span className={clsx("rounded-full px-2 py-0.5 text-[11px] font-medium", level === "low" ? "bg-amber-50 text-amber-600" : "bg-rose-50 text-rose-500")}>
+                {level === "short" ? "Faltan unidades para pedidos" : level === "out" ? "Agotado" : "Bajo"}
               </span>
             )}
+            {p.stock < 0 && <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-medium text-rose-500">Revisar: stock negativo</span>}
           </div>
         )}
         {state?.error && <div className="mt-1 text-xs text-rose-500">{state.error}</div>}

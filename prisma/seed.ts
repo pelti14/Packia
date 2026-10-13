@@ -163,6 +163,7 @@ async function main() {
               phone: `6${int(10, 99)} ${int(100, 999)} ${int(100, 999)}`,
             }),
             placedAt,
+            createdAt: placedAt,
             shippedAt,
             carrier: shippedAt ? pick(CARRIERS) : null,
             trackingNumber: shippedAt ? `PK${int(100000, 999999)}${int(1000, 9999)}` : null,

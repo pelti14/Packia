@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { safeRedirectPath } from "@/lib/security";
 
 /** Enlaces de email de Supabase (recuperar contraseña, invitaciones): canjea el código por sesión. */
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
-  const next = url.searchParams.get("next") ?? "/";
-  const safe = next.startsWith("/") && !next.startsWith("//") ? next : "/";
+  const safe = safeRedirectPath(url.searchParams.get("next"));
 
   if (code) {
     const supabase = await createSupabaseServer();

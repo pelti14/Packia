@@ -7,7 +7,7 @@ import { canAccessClient, isStaff, requireUser } from "@/lib/auth";
 import { packOrder, revertOrder } from "@/app/actions";
 import { estimateWeight, shippingOptionsFor } from "@/lib/labels";
 import { formatDate, parseAddress } from "@/lib/format";
-import { urgency } from "@/lib/schedule";
+import { urgency, slaStart } from "@/lib/schedule";
 import { ORDER_FLOW, STATUS_LABEL, type OrderStatus } from "@/lib/types";
 import { BackLink, Card, CardHeader, Notice, PlatformBadge, Pill, StatusBadge } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
@@ -32,7 +32,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   const step = ORDER_FLOW.indexOf(status);
   const units = order.items.reduce((s, i) => s + i.quantity, 0);
   const open = ["PENDING", "PICKING", "PACKED"].includes(status);
-  const u = urgency(order.placedAt);
+  const u = urgency(slaStart(order));
 
   const shipping = staff && status === "PACKED" ? await shippingOptionsFor(order.client) : null;
   const blockers = staff && open ? await orderBlockers(order) : [];

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { hardenCookie } from "@/lib/security";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
 /** Rutas accesibles sin sesión. */
@@ -23,7 +24,7 @@ export async function middleware(request: NextRequest) {
       setAll: (list: { name: string; value: string; options: CookieOptions }[]) => {
         for (const { name, value } of list) request.cookies.set(name, value);
         response = NextResponse.next({ request });
-        for (const { name, value, options } of list) response.cookies.set(name, value, options);
+        for (const { name, value, options } of list) response.cookies.set(name, value, hardenCookie(options));
       },
     },
   });

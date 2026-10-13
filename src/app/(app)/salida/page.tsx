@@ -7,7 +7,7 @@ import { clientScope, isStaff, requireUser } from "@/lib/auth";
 import { advanceOrders, revertOrders } from "@/app/actions";
 import { ClientBoard, type ClientCard } from "./client-board";
 import { formatDate, formatDay } from "@/lib/format";
-import { dueKey, madridMidnight, urgency } from "@/lib/schedule";
+import { dueKey, madridMidnight, urgency, slaStart } from "@/lib/schedule";
 import { Card, EmptyState, PageHeader, PlatformBadge, StatusBadge, Tabs } from "@/components/ui";
 
 const TABS = [
@@ -66,11 +66,11 @@ export default async function SalidaPage({ searchParams }: { searchParams: Promi
   if (staff) {
     const [allClients, allOpen] = await Promise.all([
       db.client.findMany({ orderBy: { name: "asc" }, include: { stores: { select: { platform: true } } } }),
-      db.order.findMany({ where: { status: { in: OPEN } }, select: { clientId: true, status: true, placedAt: true } }),
+      db.order.findMany({ where: { status: { in: OPEN } }, select: { clientId: true, status: true, placedAt: true, createdAt: true } }),
     ]);
     cards = allClients.map((c) => {
       const mine = allOpen.filter((o) => o.clientId === c.id);
-      const due = mine.filter((o) => urgency(o.placedAt) !== "LATER");
+      const due = mine.filter((o) => urgency(slaStart(o)) !== "LATER");
       const shipping = c.defaultShipping?.startsWith("packia:") ? c.defaultShipping.slice(7) : c.defaultShipping ? "Sendcloud" : null;
       return {
         id: c.id,
@@ -79,16 +79,16 @@ export default async function SalidaPage({ searchParams }: { searchParams: Promi
         shipping,
         open: mine.length,
         today: due.length,
-        overdue: due.filter((o) => urgency(o.placedAt) === "OVERDUE").length,
+        overdue: due.filter((o) => urgency(slaStart(o)) === "OVERDUE").length,
         pending: mine.filter((o) => o.status !== "PACKED").length,
         packed: mine.filter((o) => o.status === "PACKED").length,
       };
     });
   }
 
-  const byUrgency = (u: string) => open.filter((o) => urgency(o.placedAt) === u);
+  const byUrgency = (u: string) => open.filter((o) => urgency(slaStart(o)) === u);
   const groups: Record<string, typeof open> = {
-    TODAY: open.filter((o) => urgency(o.placedAt) !== "LATER"),
+    TODAY: open.filter((o) => urgency(slaStart(o)) !== "LATER"),
     OVERDUE: byUrgency("OVERDUE"),
     PENDING: open.filter((o) => o.status === "PENDING"),
     PICKING: open.filter((o) => o.status === "PICKING"),
@@ -196,7 +196,7 @@ export default async function SalidaPage({ searchParams }: { searchParams: Promi
                   {orders.map((o) => {
                     const open = OPEN.includes(o.status);
                     return (
-                      <tr key={o.id} className={clsx("group transition hover:bg-brand-50/40", open && urgency(o.placedAt) === "OVERDUE" && "bg-rose-50/40")}>
+                      <tr key={o.id} className={clsx("group transition hover:bg-brand-50/40", open && urgency(slaStart(o)) === "OVERDUE" && "bg-rose-50/40")}>
                         {(canAdvance || canPrint) && (
                           <td className="cell">
                             {((canAdvance && open) ||
@@ -219,7 +219,7 @@ export default async function SalidaPage({ searchParams }: { searchParams: Promi
                           {o.status === "SHIPPED" ? (
                             <span className="mono text-ink-700">{o.carrier} · {o.trackingNumber}</span>
                           ) : open ? (
-                            dueLabel(o.placedAt)
+                            dueLabel(slaStart(o))
                           ) : (
                             "—"
                           )}

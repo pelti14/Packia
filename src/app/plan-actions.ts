@@ -8,13 +8,16 @@ import { notify } from "@/lib/notifications";
 import { changeTerms, getPlans, monthLastDay, nextMonthStart } from "@/lib/plans";
 import { startOfDay } from "@/lib/schedule";
 import { formatDateOnly } from "@/lib/format";
+import { safeRedirectPath } from "@/lib/security";
 
 const str = (v: FormDataEntryValue | null | undefined) => (typeof v === "string" ? v.trim() : "");
 const parseDay = (v: string) => (/^\d{4}-\d{2}-\d{2}$/.test(v) ? new Date(`${v}T12:00:00`) : null);
 
 /** Vuelve a la página con un aviso (?ok= o ?error=). */
-function back(path: string, key: "ok" | "error", text: string): never {
+function back(rawPath: string, key: "ok" | "error", text: string): never {
   revalidatePath("/", "layout");
+  // El destino puede venir del navegador (argumento de la acción): solo rutas internas.
+  const path = safeRedirectPath(rawPath);
   redirect(`${path}${path.includes("?") ? "&" : "?"}${key}=${encodeURIComponent(text)}`);
 }
 
